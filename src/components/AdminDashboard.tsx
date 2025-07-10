@@ -21,8 +21,6 @@ import {
   Download,
   Eye,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -38,27 +36,6 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status === "unauthenticated" || session?.user?.role !== "ADMIN") {
-      router.push("/login");
-    }
-  }, [status, session, router]);
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!session || session.user.role !== "ADMIN") {
-    return null;
-  }
-
   // Students
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);

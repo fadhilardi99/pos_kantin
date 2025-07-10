@@ -21,12 +21,12 @@ async function main() {
   });
 
   // Create admin user
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  const adminPassword = await bcrypt.hash("admin", 12);
   const adminUser = await prisma.user.upsert({
-    where: { email: "admin@sman1jakarta.sch.id" },
+    where: { email: "admin@demo.com" },
     update: {},
     create: {
-      email: "admin@sman1jakarta.sch.id",
+      email: "admin@demo.com",
       password: adminPassword,
       name: "Administrator",
       role: "ADMIN",
@@ -44,12 +44,12 @@ async function main() {
   });
 
   // Create cashier user
-  const cashierPassword = await bcrypt.hash("cashier123", 12);
+  const cashierPassword = await bcrypt.hash("cashier", 12);
   const cashierUser = await prisma.user.upsert({
-    where: { email: "cashier@sman1jakarta.sch.id" },
+    where: { email: "cashier@demo.com" },
     update: {},
     create: {
-      email: "cashier@sman1jakarta.sch.id",
+      email: "cashier@demo.com",
       password: cashierPassword,
       name: "Siti Kasir",
       role: "CASHIER",
@@ -67,12 +67,12 @@ async function main() {
   });
 
   // Create parent user
-  const parentPassword = await bcrypt.hash("parent123", 12);
+  const parentPassword = await bcrypt.hash("parent", 12);
   const parentUser = await prisma.user.upsert({
-    where: { email: "parent@example.com" },
+    where: { email: "parent@demo.com" },
     update: {},
     create: {
-      email: "parent@example.com",
+      email: "parent@demo.com",
       password: parentPassword,
       name: "Ahmad Santoso",
       role: "PARENT",
@@ -92,12 +92,12 @@ async function main() {
   });
 
   // Create student user
-  const studentPassword = await bcrypt.hash("student123", 12);
+  const studentPassword = await bcrypt.hash("student", 12);
   const studentUser = await prisma.user.upsert({
-    where: { email: "student@example.com" },
+    where: { email: "student@demo.com" },
     update: {},
     create: {
-      email: "student@example.com",
+      email: "student@demo.com",
       password: studentPassword,
       name: "Ahmad Rizki",
       role: "STUDENT",
@@ -211,8 +211,10 @@ async function main() {
   ]);
 
   // Create sample transactions
-  const transaction = await prisma.transaction.create({
-    data: {
+  const transaction = await prisma.transaction.upsert({
+    where: { transactionNo: "TRX-2024-001" },
+    update: {},
+    create: {
       transactionNo: "TRX-2024-001",
       studentId: student.id,
       cashierId: cashier.id,

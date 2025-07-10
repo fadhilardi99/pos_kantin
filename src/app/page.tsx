@@ -24,6 +24,7 @@ import StudentDashboard, {
 import CashierDashboard from "@/components/CashierDashboard";
 import AdminDashboard from "@/components/AdminDashboard";
 import ParentDashboard from "@/components/ParentDashboard";
+import { useSession, signOut } from "next-auth/react";
 
 type User = {
   role: "student" | "cashier" | "admin" | "parent";
@@ -34,36 +35,32 @@ type User = {
 };
 
 export default function Page() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { data: session, status } = useSession();
   const [showLogin, setShowLogin] = useState(false);
 
   const handleLogin = (userData: User) => {
-    setCurrentUser(userData);
+    // setCurrentUser(userData); // This line is removed as per the new_code
     setShowLogin(false);
   };
 
   const handleLogout = () => {
-    setCurrentUser(null);
+    signOut(); // Redirect otomatis ke NEXTAUTH_URL
   };
 
-  if (currentUser) {
-    switch (currentUser.role) {
-      case "student":
-        if (currentUser.nis) {
-          return (
-            <StudentDashboard
-              user={currentUser as StudentUser}
-              onLogout={handleLogout}
-            />
-          );
-        }
-        return <div>Data siswa tidak lengkap</div>;
-      case "cashier":
-        return <CashierDashboard user={currentUser} onLogout={handleLogout} />;
-      case "admin":
-        return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
-      case "parent":
-        return <ParentDashboard user={currentUser} onLogout={handleLogout} />;
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
+
+  if (session?.user) {
+    switch (session.user.role) {
+      case "STUDENT":
+        return <StudentDashboard user={session.user} onLogout={handleLogout} />;
+      case "CASHIER":
+        return <CashierDashboard user={session.user} onLogout={handleLogout} />;
+      case "ADMIN":
+        return <AdminDashboard user={session.user} onLogout={handleLogout} />;
+      case "PARENT":
+        return <ParentDashboard user={session.user} onLogout={handleLogout} />;
       default:
         return <div>Role tidak dikenali</div>;
     }

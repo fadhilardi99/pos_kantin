@@ -19,8 +19,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, LogOut, Plus, Search, History } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 interface User {
   name: string;
@@ -33,26 +31,12 @@ interface ParentDashboardProps {
 }
 
 const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  // Hapus import berikut:
+  // import { useSession } from "next-auth/react";
+  // import { useRouter } from "next/navigation";
 
-  useEffect(() => {
-    if (status === "unauthenticated" || session?.user?.role !== "PARENT") {
-      router.push("/login");
-    }
-  }, [status, session, router]);
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!session || session.user.role !== "PARENT") {
-    return null;
-  }
+  // Hapus semua kode yang menggunakan useSession, useRouter, dan router.push("/login")
+  // Hapus juga pengecekan status === "loading" dan session.user.role !== "PARENT"
 
   const [selectedStudent, setSelectedStudent] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");

@@ -21,8 +21,6 @@ import {
   Receipt,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 type Student = {
   name: string;
@@ -46,27 +44,6 @@ interface CashierDashboardProps {
 }
 
 const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status === "unauthenticated" || session?.user?.role !== "CASHIER") {
-      router.push("/login");
-    }
-  }, [status, session, router]);
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!session || session.user.role !== "CASHIER") {
-    return null;
-  }
-
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [cart, setCart] = useState<Product[]>([]);
   const [nisInput, setNisInput] = useState("");
