@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,6 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, LogOut, Plus, Search, History } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface User {
   name: string;
@@ -31,6 +33,27 @@ interface ParentDashboardProps {
 }
 
 const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated" || session?.user?.role !== "PARENT") {
+      router.push("/login");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session || session.user.role !== "PARENT") {
+    return null;
+  }
+
   const [selectedStudent, setSelectedStudent] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
 
@@ -52,33 +75,59 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
     },
   ]);
 
-  // Demo data histori top up
-  const [topUpHistory] = useState([
-    {
-      id: 1,
-      date: "2024-01-15",
-      student: "Ahmad Rizki",
-      amount: 50000,
-      method: "Transfer Bank",
-      status: "success",
-    },
-    {
-      id: 2,
-      date: "2024-01-12",
-      student: "Siti Rizka",
-      amount: 25000,
-      method: "Cash",
-      status: "success",
-    },
-    {
-      id: 3,
-      date: "2024-01-10",
-      student: "Ahmad Rizki",
-      amount: 30000,
-      method: "Transfer Bank",
-      status: "success",
-    },
-  ]);
+  // Top up & transaction history from API
+  const [topUpHistory, setTopUpHistory] = useState<any[]>([]);
+  const [loadingTopUp, setLoadingTopUp] = useState(true);
+  const [errorTopUp, setErrorTopUp] = useState<string | null>(null);
+  const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
+  const [loadingTx, setLoadingTx] = useState(true);
+  const [errorTx, setErrorTx] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchTopUps() {
+      setLoadingTopUp(true);
+      setErrorTopUp(null);
+      try {
+        const res = await fetch("/api/topups");
+        const data = await res.json();
+        // Filter topups for this parent's children (by NIS or name)
+        const filtered = data.filter((t: any) =>
+          children.some(
+            (c) => t.student?.nis === c.nis || t.student?.name === c.name
+          )
+        );
+        setTopUpHistory(filtered);
+      } catch (e: any) {
+        setErrorTopUp("Gagal memuat top up");
+      } finally {
+        setLoadingTopUp(false);
+      }
+    }
+    fetchTopUps();
+  }, [children]);
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      setLoadingTx(true);
+      setErrorTx(null);
+      try {
+        const res = await fetch("/api/transactions");
+        const data = await res.json();
+        // Filter transactions for this parent's children (by NIS or name)
+        const filtered = data.filter((t: any) =>
+          children.some(
+            (c) => t.student?.nis === c.nis || t.student?.name === c.name
+          )
+        );
+        setTransactionHistory(filtered);
+      } catch (e: any) {
+        setErrorTx("Gagal memuat transaksi");
+      } finally {
+        setLoadingTx(false);
+      }
+    }
+    fetchTransactions();
+  }, [children]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -320,40 +369,54 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topUpHistory.map((history) => (
+                  {topUpHistory.map((topup) => (
                     <div
-                      key={history.id}
-                      className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                      key={topup.id}
+                      className="p-4 bg-gradient-to-r from-emerald-100 to-green-100 rounded-lg border border-emerald-200 mb-2"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-semibold text-gray-800">
-                              {history.student}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Metode: {history.method}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {history.date}
-                            </p>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-semibold text-emerald-800">
+                            {topup.student?.name}
                           </div>
+                          <div className="text-sm text-emerald-600">
+                            Tanggal:{" "}
+                            {new Date(topup.createdAt).toLocaleDateString(
+                              "id-ID"
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Jumlah:{" "}
+                            <span className="font-bold">
+                              {formatCurrency(Number(topup.amount))}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Metode: {topup.method}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Status:{" "}
+                            <span
+                              className={
+                                topup.status === "REJECTED"
+                                  ? "text-red-600"
+                                  : topup.status === "APPROVED"
+                                  ? "text-emerald-700"
+                                  : "text-gray-700"
+                              }
+                            >
+                              {topup.status}
+                            </span>
+                          </div>
+                          {topup.status === "REJECTED" && topup.notes && (
+                            <div className="mt-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+                              <span className="font-semibold">
+                                Alasan Penolakan:
+                              </span>{" "}
+                              {topup.notes}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-emerald-700">
-                          +{formatCurrency(history.amount)}
-                        </p>
-                        <Badge
-                          variant={
-                            history.status === "success"
-                              ? "default"
-                              : "destructive"
-                          }
-                          className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                        >
-                          {history.status === "success" ? "Berhasil" : "Gagal"}
-                        </Badge>
                       </div>
                     </div>
                   ))}

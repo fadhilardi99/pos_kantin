@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +21,8 @@ import {
   Receipt,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 type Student = {
   name: string;
@@ -44,36 +46,50 @@ interface CashierDashboardProps {
 }
 
 const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated" || session?.user?.role !== "CASHIER") {
+      router.push("/login");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session || session.user.role !== "CASHIER") {
+    return null;
+  }
+
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [cart, setCart] = useState<Product[]>([]);
   const [nisInput, setNisInput] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [errorProducts, setErrorProducts] = useState<string | null>(null);
 
-  const products: Product[] = [
-    {
-      id: 1,
-      name: "Nasi Gudeg",
-      price: 8000,
-      stock: 25,
-      category: "Makanan Berat",
-    },
-    {
-      id: 2,
-      name: "Mie Ayam",
-      price: 10000,
-      stock: 20,
-      category: "Makanan Berat",
-    },
-    {
-      id: 3,
-      name: "Soto Ayam",
-      price: 9000,
-      stock: 15,
-      category: "Makanan Berat",
-    },
-    { id: 4, name: "Es Teh", price: 3000, stock: 50, category: "Minuman" },
-    { id: 5, name: "Jus Jeruk", price: 5000, stock: 30, category: "Minuman" },
-    { id: 6, name: "Air Mineral", price: 2000, stock: 40, category: "Minuman" },
-  ];
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoadingProducts(true);
+      setErrorProducts(null);
+      try {
+        const res = await fetch("/api/products");
+        const data = await res.json();
+        setProducts(data);
+      } catch (e: any) {
+        setErrorProducts("Gagal memuat produk");
+      } finally {
+        setLoadingProducts(false);
+      }
+    }
+    fetchProducts();
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -394,128 +410,154 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                   </TabsList>
 
                   <TabsContent value="all" className="space-y-4">
-                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {products.map((product) => (
-                        <Card
-                          key={product.id}
-                          className="hover:shadow-lg transition-shadow border-emerald-200"
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-semibold">{product.name}</h3>
-                              <Badge
-                                variant={
-                                  product.stock > 10
-                                    ? "secondary"
-                                    : "destructive"
-                                }
-                                className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                    {loadingProducts ? (
+                      <p className="text-center py-8">Loading products...</p>
+                    ) : errorProducts ? (
+                      <p className="text-center py-8 text-red-500">
+                        {errorProducts}
+                      </p>
+                    ) : (
+                      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {products.map((product) => (
+                          <Card
+                            key={product.id}
+                            className="hover:shadow-lg transition-shadow border-emerald-200"
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="font-semibold">
+                                  {product.name}
+                                </h3>
+                                <Badge
+                                  variant={
+                                    product.stock > 10
+                                      ? "secondary"
+                                      : "destructive"
+                                  }
+                                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                                >
+                                  Stok: {product.stock}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {product.category}
+                              </p>
+                              <p className="font-bold text-emerald-700 mb-3">
+                                {formatCurrency(product.price)}
+                              </p>
+                              <Button
+                                onClick={() => addToCart(product)}
+                                className="w-full bg-emerald-700 hover:bg-emerald-800"
+                                disabled={product.stock === 0}
                               >
-                                Stok: {product.stock}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2">
-                              {product.category}
-                            </p>
-                            <p className="font-bold text-emerald-700 mb-3">
-                              {formatCurrency(product.price)}
-                            </p>
-                            <Button
-                              onClick={() => addToCart(product)}
-                              className="w-full bg-emerald-700 hover:bg-emerald-800"
-                              disabled={product.stock === 0}
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              Tambah
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Tambah
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="makanan">
-                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {products
-                        .filter((p) => p.category === "Makanan Berat")
-                        .map((product) => (
-                          <Card
-                            key={product.id}
-                            className="hover:shadow-lg transition-shadow border-emerald-200"
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-semibold">
-                                  {product.name}
-                                </h3>
-                                <Badge
-                                  variant={
-                                    product.stock > 10
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                    {loadingProducts ? (
+                      <p className="text-center py-8">Loading products...</p>
+                    ) : errorProducts ? (
+                      <p className="text-center py-8 text-red-500">
+                        {errorProducts}
+                      </p>
+                    ) : (
+                      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {products
+                          .filter((p) => p.category === "Makanan Berat")
+                          .map((product) => (
+                            <Card
+                              key={product.id}
+                              className="hover:shadow-lg transition-shadow border-emerald-200"
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h3 className="font-semibold">
+                                    {product.name}
+                                  </h3>
+                                  <Badge
+                                    variant={
+                                      product.stock > 10
+                                        ? "secondary"
+                                        : "destructive"
+                                    }
+                                    className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                                  >
+                                    Stok: {product.stock}
+                                  </Badge>
+                                </div>
+                                <p className="font-bold text-emerald-700 mb-3">
+                                  {formatCurrency(product.price)}
+                                </p>
+                                <Button
+                                  onClick={() => addToCart(product)}
+                                  className="w-full bg-emerald-700 hover:bg-emerald-800"
+                                  disabled={product.stock === 0}
                                 >
-                                  Stok: {product.stock}
-                                </Badge>
-                              </div>
-                              <p className="font-bold text-emerald-700 mb-3">
-                                {formatCurrency(product.price)}
-                              </p>
-                              <Button
-                                onClick={() => addToCart(product)}
-                                className="w-full bg-emerald-700 hover:bg-emerald-800"
-                                disabled={product.stock === 0}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Tambah
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Tambah
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="minuman">
-                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {products
-                        .filter((p) => p.category === "Minuman")
-                        .map((product) => (
-                          <Card
-                            key={product.id}
-                            className="hover:shadow-lg transition-shadow border-emerald-200"
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-semibold">
-                                  {product.name}
-                                </h3>
-                                <Badge
-                                  variant={
-                                    product.stock > 10
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                    {loadingProducts ? (
+                      <p className="text-center py-8">Loading products...</p>
+                    ) : errorProducts ? (
+                      <p className="text-center py-8 text-red-500">
+                        {errorProducts}
+                      </p>
+                    ) : (
+                      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {products
+                          .filter((p) => p.category === "Minuman")
+                          .map((product) => (
+                            <Card
+                              key={product.id}
+                              className="hover:shadow-lg transition-shadow border-emerald-200"
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h3 className="font-semibold">
+                                    {product.name}
+                                  </h3>
+                                  <Badge
+                                    variant={
+                                      product.stock > 10
+                                        ? "secondary"
+                                        : "destructive"
+                                    }
+                                    className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                                  >
+                                    Stok: {product.stock}
+                                  </Badge>
+                                </div>
+                                <p className="font-bold text-emerald-700 mb-3">
+                                  {formatCurrency(product.price)}
+                                </p>
+                                <Button
+                                  onClick={() => addToCart(product)}
+                                  className="w-full bg-emerald-700 hover:bg-emerald-800"
+                                  disabled={product.stock === 0}
                                 >
-                                  Stok: {product.stock}
-                                </Badge>
-                              </div>
-                              <p className="font-bold text-emerald-700 mb-3">
-                                {formatCurrency(product.price)}
-                              </p>
-                              <Button
-                                onClick={() => addToCart(product)}
-                                className="w-full bg-emerald-700 hover:bg-emerald-800"
-                                disabled={product.stock === 0}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Tambah
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Tambah
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>

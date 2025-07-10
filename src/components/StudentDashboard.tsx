@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 import { Wallet, QrCode, History, LogOut, RefreshCw } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export interface StudentUser {
   name: string;
@@ -23,36 +25,55 @@ interface StudentDashboardProps {
 }
 
 const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
-  const [transactions] = useState([
-    {
-      id: 1,
-      date: "2024-01-15",
-      item: "Nasi Gudeg + Es Teh",
-      amount: -12000,
-      balance: 38000,
-    },
-    {
-      id: 2,
-      date: "2024-01-14",
-      item: "Mie Ayam + Jus Jeruk",
-      amount: -15000,
-      balance: 50000,
-    },
-    {
-      id: 3,
-      date: "2024-01-13",
-      item: "Top Up dari Orang Tua",
-      amount: +25000,
-      balance: 65000,
-    },
-    {
-      id: 4,
-      date: "2024-01-12",
-      item: "Soto Ayam + Air Mineral",
-      amount: -10000,
-      balance: 40000,
-    },
-  ]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated" || session?.user?.role !== "STUDENT") {
+      router.push("/login");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session || session.user.role !== "STUDENT") {
+    return null;
+  }
+
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/transactions");
+        const data = await res.json();
+        // Filter transactions for this student (by NIS or name)
+        const filtered = data.filter((tx: any) => {
+          // tx.student?.nis or tx.student?.user?.name
+          return (
+            (tx.student && tx.student.nis === user.nis) ||
+            (tx.student && tx.student.name === user.name)
+          );
+        });
+        setTransactions(filtered);
+      } catch (e: any) {
+        setError("Gagal memuat transaksi");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTransactions();
+  }, [user.nis, user.name]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -205,37 +226,54 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {transactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">
-                      {transaction.item}
-                    </p>
-                    <p className="text-sm text-gray-500">{transaction.date}</p>
+            {loading ? (
+              <div className="text-center text-gray-500 py-8">
+                Memuat data...
+              </div>
+            ) : error ? (
+              <div className="text-center text-red-500 py-8">{error}</div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                Belum ada transaksi
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-800">
+                        {/* Show product names */}
+                        {transaction.transactionItems
+                          ?.map((item: any) => item.product?.name)
+                          .join(" + ") || "-"}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(transaction.createdAt).toLocaleDateString(
+                          "id-ID"
+                        )}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`font-bold ${
+                          transaction.totalAmount > 0
+                            ? "text-red-600"
+                            : "text-emerald-700"
+                        }`}
+                      >
+                        -{formatCurrency(Number(transaction.totalAmount))}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {/* Saldo after transaction not available, so skip */}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-bold ${
-                        transaction.amount > 0
-                          ? "text-emerald-700"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {transaction.amount > 0 ? "+" : ""}
-                      {formatCurrency(transaction.amount)}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Saldo: {formatCurrency(transaction.balance)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
+                ))}
+              </div>
+            )}
             <div className="mt-6 text-center">
               <Button
                 variant="outline"

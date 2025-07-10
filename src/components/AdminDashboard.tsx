@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +21,16 @@ import {
   Download,
   Eye,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface AdminDashboardProps {
   user: { name: string };
@@ -28,75 +38,119 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
-  const [students] = useState([
-    {
-      id: 1,
-      name: "Ahmad Rizki",
-      nis: "2024001",
-      class: "XII IPA 1",
-      saldo: 50000,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "Siti Fatimah",
-      nis: "2024002",
-      class: "XII IPA 2",
-      saldo: 35000,
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Budi Santoso",
-      nis: "2024003",
-      class: "XI IPS 1",
-      saldo: 15000,
-      status: "active",
-    },
-    {
-      id: 4,
-      name: "Maya Sari",
-      nis: "2024004",
-      class: "XI IPS 2",
-      saldo: 75000,
-      status: "active",
-    },
-  ]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  const [transactions] = useState([
-    {
-      id: 1,
-      date: "2024-01-15",
-      student: "Ahmad Rizki",
-      items: "Nasi Gudeg + Es Teh",
-      amount: 12000,
-      cashier: "Siti Kasir",
-    },
-    {
-      id: 2,
-      date: "2024-01-15",
-      student: "Siti Fatimah",
-      items: "Mie Ayam + Jus Jeruk",
-      amount: 15000,
-      cashier: "Siti Kasir",
-    },
-    {
-      id: 3,
-      date: "2024-01-14",
-      student: "Budi Santoso",
-      items: "Soto Ayam + Air Mineral",
-      amount: 11000,
-      cashier: "Andi Kasir",
-    },
-    {
-      id: 4,
-      date: "2024-01-14",
-      student: "Maya Sari",
-      items: "Nasi Gudeg + Jus Jeruk",
-      amount: 13000,
-      cashier: "Siti Kasir",
-    },
-  ]);
+  useEffect(() => {
+    if (status === "unauthenticated" || session?.user?.role !== "ADMIN") {
+      router.push("/login");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!session || session.user.role !== "ADMIN") {
+    return null;
+  }
+
+  // Students
+  const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [errorStudents, setErrorStudents] = useState<string | null>(null);
+  // Transactions
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [errorTransactions, setErrorTransactions] = useState<string | null>(
+    null
+  );
+  // Products
+  const [products, setProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [errorProducts, setErrorProducts] = useState<string | null>(null);
+  // TopUps
+  const [topups, setTopups] = useState<any[]>([]);
+  const [loadingTopups, setLoadingTopups] = useState(true);
+  const [errorTopups, setErrorTopups] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rejectModal, setRejectModal] = useState<{
+    open: boolean;
+    id: string | null;
+  }>({ open: false, id: null });
+  const [rejectReason, setRejectReason] = useState("");
+
+  useEffect(() => {
+    async function fetchStudents() {
+      setLoadingStudents(true);
+      setErrorStudents(null);
+      try {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        setStudents(data);
+      } catch (e: any) {
+        setErrorStudents("Gagal memuat siswa");
+      } finally {
+        setLoadingStudents(false);
+      }
+    }
+    fetchStudents();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      setLoadingTransactions(true);
+      setErrorTransactions(null);
+      try {
+        const res = await fetch("/api/transactions");
+        const data = await res.json();
+        setTransactions(data);
+      } catch (e: any) {
+        setErrorTransactions("Gagal memuat transaksi");
+      } finally {
+        setLoadingTransactions(false);
+      }
+    }
+    fetchTransactions();
+  }, []);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoadingProducts(true);
+      setErrorProducts(null);
+      try {
+        const res = await fetch("/api/products");
+        const data = await res.json();
+        setProducts(data);
+      } catch (e: any) {
+        setErrorProducts("Gagal memuat produk");
+      } finally {
+        setLoadingProducts(false);
+      }
+    }
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTopups() {
+      setLoadingTopups(true);
+      setErrorTopups(null);
+      try {
+        const res = await fetch("/api/topups");
+        const data = await res.json();
+        setTopups(data);
+      } catch (e: any) {
+        setErrorTopups("Gagal memuat top up");
+      } finally {
+        setLoadingTopups(false);
+      }
+    }
+    fetchTopups();
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -107,12 +161,48 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   };
 
   const getTotalSales = () => {
-    return transactions.reduce((total, t) => total + t.amount, 0);
+    return transactions.reduce(
+      (total, t) => total + Number(t.totalAmount || 0),
+      0
+    );
   };
 
   const getTotalBalance = () => {
-    return students.reduce((total, s) => total + s.saldo, 0);
+    return students.reduce(
+      (total, s) => total + Number(s.student?.saldo || 0),
+      0
+    );
   };
+
+  // Handler for approve/reject topup
+  async function handleTopupAction(
+    id: string,
+    action: "approve" | "reject",
+    reason?: string
+  ) {
+    setActionLoading(id + action);
+    try {
+      const res = await fetch("/api/topups", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action, reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memproses top up");
+      toast({
+        title: `Top up ${action === "approve" ? "disetujui" : "ditolak"}`,
+      });
+      // Refresh topups
+      const res2 = await fetch("/api/topups");
+      setTopups(await res2.json());
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+      setRejectModal({ open: false, id: null });
+      setRejectReason("");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
@@ -152,7 +242,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 <div>
                   <p className="text-sm text-gray-600">Total Siswa</p>
                   <p className="text-2xl font-bold text-emerald-700">
-                    {students.length}
+                    {loadingStudents
+                      ? "Loading..."
+                      : errorStudents
+                      ? errorStudents
+                      : students.length}
                   </p>
                 </div>
                 <Users className="h-8 w-8 text-emerald-600" />
@@ -166,7 +260,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 <div>
                   <p className="text-sm text-gray-600">Penjualan Hari Ini</p>
                   <p className="text-2xl font-bold text-emerald-700">
-                    {formatCurrency(getTotalSales())}
+                    {loadingTransactions
+                      ? "Loading..."
+                      : errorTransactions
+                      ? errorTransactions
+                      : formatCurrency(getTotalSales())}
                   </p>
                 </div>
                 <ShoppingCart className="h-8 w-8 text-emerald-600" />
@@ -180,7 +278,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 <div>
                   <p className="text-sm text-gray-600">Total Saldo Siswa</p>
                   <p className="text-2xl font-bold text-emerald-700">
-                    {formatCurrency(getTotalBalance())}
+                    {loadingStudents
+                      ? "Loading..."
+                      : errorStudents
+                      ? errorStudents
+                      : formatCurrency(getTotalBalance())}
                   </p>
                 </div>
                 <CreditCard className="h-8 w-8 text-emerald-600" />
@@ -194,7 +296,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 <div>
                   <p className="text-sm text-gray-600">Transaksi Hari Ini</p>
                   <p className="text-2xl font-bold text-emerald-700">
-                    {transactions.length}
+                    {loadingTransactions
+                      ? "Loading..."
+                      : errorTransactions
+                      ? errorTransactions
+                      : transactions.length}
                   </p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-emerald-600" />
@@ -252,60 +358,68 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {students.map((student) => (
-                    <div
-                      key={student.id}
-                      className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                    >
-                      <div className="flex-1">
+                {loadingStudents ? (
+                  <p>Loading students...</p>
+                ) : errorStudents ? (
+                  <p className="text-red-500">{errorStudents}</p>
+                ) : (
+                  <div className="space-y-4">
+                    {students.map((student) => (
+                      <div
+                        key={student.id}
+                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4">
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {student.name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                NIS: {student.nis} • Kelas: {student.class}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                         <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-semibold text-gray-800">
-                              {student.name}
+                          <div className="text-right">
+                            <p className="font-bold text-emerald-700">
+                              {formatCurrency(student.saldo)}
                             </p>
-                            <p className="text-sm text-gray-600">
-                              NIS: {student.nis} • Kelas: {student.class}
-                            </p>
+                            <Badge
+                              variant={
+                                student.status === "active"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                            >
+                              {student.status === "active"
+                                ? "Aktif"
+                                : "Nonaktif"}
+                            </Badge>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                            >
+                              Top Up
+                            </Button>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-bold text-emerald-700">
-                            {formatCurrency(student.saldo)}
-                          </p>
-                          <Badge
-                            variant={
-                              student.status === "active"
-                                ? "default"
-                                : "secondary"
-                            }
-                            className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                          >
-                            {student.status === "active" ? "Aktif" : "Nonaktif"}
-                          </Badge>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                          >
-                            Top Up
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -333,38 +447,44 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {transactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-semibold text-gray-800">
-                              {transaction.student}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {transaction.items}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Kasir: {transaction.cashier}
-                            </p>
+                {loadingTransactions ? (
+                  <p>Loading transactions...</p>
+                ) : errorTransactions ? (
+                  <p className="text-red-500">{errorTransactions}</p>
+                ) : (
+                  <div className="space-y-4">
+                    {transactions.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4">
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {transaction.student}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {transaction.items}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Kasir: {transaction.cashier}
+                              </p>
+                            </div>
                           </div>
                         </div>
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-700">
+                            {formatCurrency(transaction.amount)}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {transaction.date}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-emerald-700">
-                          {formatCurrency(transaction.amount)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {transaction.date}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -382,18 +502,34 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>Total Transaksi:</span>
-                      <span className="font-bold">{transactions.length}</span>
+                      <span className="font-bold">
+                        {loadingTransactions
+                          ? "Loading..."
+                          : errorTransactions
+                          ? errorTransactions
+                          : transactions.length}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Penjualan:</span>
                       <span className="font-bold text-emerald-700">
-                        {formatCurrency(getTotalSales())}
+                        {loadingTransactions
+                          ? "Loading..."
+                          : errorTransactions
+                          ? errorTransactions
+                          : formatCurrency(getTotalSales())}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Rata-rata per Transaksi:</span>
                       <span className="font-bold">
-                        {formatCurrency(getTotalSales() / transactions.length)}
+                        {loadingTransactions
+                          ? "Loading..."
+                          : errorTransactions
+                          ? errorTransactions
+                          : formatCurrency(
+                              getTotalSales() / transactions.length
+                            )}
                       </span>
                     </div>
                   </div>
@@ -501,8 +637,135 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Approval Top Up */}
+          <TabsContent value="approval">
+            <Card className="border-emerald-200 mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-emerald-800">
+                  <CreditCard className="h-5 w-5" />
+                  <span>Approval Top Up</span>
+                </CardTitle>
+                <CardDescription>
+                  Daftar permintaan top up yang menunggu persetujuan
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingTopups ? (
+                  <div>Loading top up...</div>
+                ) : errorTopups ? (
+                  <div className="text-red-500">{errorTopups}</div>
+                ) : (
+                  <div className="space-y-4">
+                    {topups.filter((t) => t.status === "PENDING").length ===
+                    0 ? (
+                      <div className="text-gray-500">
+                        Tidak ada top up pending
+                      </div>
+                    ) : (
+                      topups
+                        .filter((t) => t.status === "PENDING")
+                        .map((t) => (
+                          <div
+                            key={t.id}
+                            className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200"
+                          >
+                            <div>
+                              <div className="font-semibold text-emerald-800">
+                                {t.student?.name}
+                              </div>
+                              <div className="text-sm text-emerald-600">
+                                NIS: {t.student?.nis}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Jumlah:{" "}
+                                <span className="font-bold">
+                                  {formatCurrency(Number(t.amount))}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Metode: {t.method}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                disabled={actionLoading === t.id + "approve"}
+                                onClick={() =>
+                                  handleTopupAction(t.id, "approve")
+                                }
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                              >
+                                {actionLoading === t.id + "approve"
+                                  ? "Memproses..."
+                                  : "Approve"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={actionLoading === t.id + "reject"}
+                                onClick={() =>
+                                  setRejectModal({ open: true, id: t.id })
+                                }
+                              >
+                                {actionLoading === t.id + "reject"
+                                  ? "Memproses..."
+                                  : "Reject"}
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modal for reject reason */}
+      <Dialog
+        open={rejectModal.open}
+        onOpenChange={(open) =>
+          setRejectModal({ open, id: open ? rejectModal.id : null })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alasan Penolakan Top Up</DialogTitle>
+          </DialogHeader>
+          <textarea
+            className="w-full border rounded p-2 min-h-[80px]"
+            placeholder="Masukkan alasan penolakan..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectModal({ open: false, id: null })}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={
+                !rejectReason.trim() ||
+                actionLoading === rejectModal.id + "reject"
+              }
+              onClick={() =>
+                rejectModal.id &&
+                handleTopupAction(rejectModal.id, "reject", rejectReason)
+              }
+            >
+              {actionLoading === rejectModal.id + "reject"
+                ? "Memproses..."
+                : "Tolak Top Up"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
