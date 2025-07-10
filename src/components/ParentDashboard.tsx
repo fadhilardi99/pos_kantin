@@ -123,13 +123,13 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   const quickTopUpAmounts = [10000, 25000, 50000, 100000];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
       {/* Header */}
-      <header className="bg-white shadow-md border-b-4 border-purple-500">
+      <header className="bg-white shadow-lg border-b-4 border-emerald-700">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-purple-500 p-2 rounded-full">
+              <div className="bg-emerald-700 p-2 rounded-full">
                 <CreditCard className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -142,7 +142,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
             <Button
               onClick={onLogout}
               variant="outline"
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 border-emerald-700 text-emerald-700 hover:bg-emerald-700 hover:text-white"
             >
               <LogOut className="h-4 w-4" />
               <span>Keluar</span>
@@ -155,9 +155,9 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Panel - Children Info */}
           <div className="lg:col-span-1 space-y-6">
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-emerald-800">
                   <Search className="h-5 w-5" />
                   <span>Data Anak</span>
                 </CardTitle>
@@ -167,20 +167,20 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                   {children.map((child) => (
                     <div
                       key={child.id}
-                      className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg"
+                      className="p-4 bg-gradient-to-r from-emerald-100 to-green-100 rounded-lg border border-emerald-200"
                     >
-                      <h3 className="font-semibold text-purple-800">
+                      <h3 className="font-semibold text-emerald-800">
                         {child.name}
                       </h3>
-                      <p className="text-sm text-purple-600">
+                      <p className="text-sm text-emerald-600">
                         NIS: {child.nis}
                       </p>
-                      <p className="text-sm text-purple-600">
+                      <p className="text-sm text-emerald-600">
                         Kelas: {child.class}
                       </p>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-sm text-gray-600">Saldo:</span>
-                        <span className="font-bold text-green-600">
+                        <span className="font-bold text-emerald-700">
                           {formatCurrency(child.saldo)}
                         </span>
                       </div>
@@ -191,15 +191,17 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
             </Card>
 
             {/* Quick Stats */}
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle>Statistik Bulan Ini</CardTitle>
+                <CardTitle className="text-emerald-800">
+                  Statistik Bulan Ini
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Top Up:</span>
-                    <span className="font-bold text-purple-600">
+                    <span className="font-bold text-emerald-700">
                       {formatCurrency(105000)}
                     </span>
                   </div>
@@ -219,9 +221,9 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
           {/* Right Panel - Top Up & History */}
           <div className="lg:col-span-2 space-y-6">
             {/* Top Up Form */}
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-emerald-800">
                   <Plus className="h-5 w-5" />
                   <span>Top Up Saldo</span>
                 </CardTitle>
@@ -236,7 +238,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                     value={selectedStudent}
                     onValueChange={setSelectedStudent}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="border-emerald-300 focus:border-emerald-500">
                       <SelectValue placeholder="Pilih anak yang akan di-top up" />
                     </SelectTrigger>
                     <SelectContent>
@@ -258,6 +260,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                     placeholder="Masukkan jumlah (min. Rp 10.000)"
                     value={topUpAmount}
                     onChange={(e) => setTopUpAmount(e.target.value)}
+                    className="border-emerald-300 focus:border-emerald-500"
                   />
                 </div>
 
@@ -271,7 +274,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                         variant="outline"
                         size="sm"
                         onClick={() => setTopUpAmount(amount.toString())}
-                        className="text-xs"
+                        className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                       >
                         {formatCurrency(amount)}
                       </Button>
@@ -282,7 +285,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                 <div>
                   <Label>Metode Pembayaran</Label>
                   <Select defaultValue="transfer">
-                    <SelectTrigger>
+                    <SelectTrigger className="border-emerald-300 focus:border-emerald-500">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -295,7 +298,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
 
                 <Button
                   onClick={handleTopUp}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800"
                   disabled={!selectedStudent || !topUpAmount}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -305,9 +308,9 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
             </Card>
 
             {/* Top Up History */}
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-emerald-800">
                   <History className="h-5 w-5" />
                   <span>Riwayat Top Up</span>
                 </CardTitle>
@@ -320,7 +323,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                   {topUpHistory.map((history) => (
                     <div
                       key={history.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center space-x-4">
@@ -338,7 +341,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-green-600">
+                        <p className="font-bold text-emerald-700">
                           +{formatCurrency(history.amount)}
                         </p>
                         <Badge
@@ -347,6 +350,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                               ? "default"
                               : "destructive"
                           }
+                          className="bg-emerald-100 text-emerald-800 border-emerald-200"
                         >
                           {history.status === "success" ? "Berhasil" : "Gagal"}
                         </Badge>
@@ -356,7 +360,10 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                 </div>
 
                 <div className="mt-6 text-center">
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
                     <History className="h-4 w-4 mr-2" />
                     Lihat Semua Riwayat
                   </Button>

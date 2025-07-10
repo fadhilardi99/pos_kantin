@@ -195,13 +195,13 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
       {/* Header */}
-      <header className="bg-white shadow-md border-b-4 border-green-500">
+      <header className="bg-white shadow-lg border-b-4 border-emerald-700">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-green-500 p-2 rounded-full">
+              <div className="bg-emerald-700 p-2 rounded-full">
                 <ShoppingCart className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -210,13 +210,16 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="secondary" className="px-3 py-1">
+              <Badge
+                variant="secondary"
+                className="px-3 py-1 bg-emerald-100 text-emerald-800 border-emerald-200"
+              >
                 Shift: 08:00 - 16:00
               </Badge>
               <Button
                 onClick={onLogout}
                 variant="outline"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 border-emerald-700 text-emerald-700 hover:bg-emerald-700 hover:text-white"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Keluar</span>
@@ -231,9 +234,9 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
           {/* Left Panel - Student & Cart */}
           <div className="lg:col-span-1 space-y-6">
             {/* Student Scanner */}
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-emerald-800">
                   <User className="h-5 w-5" />
                   <span>Identifikasi Siswa</span>
                 </CardTitle>
@@ -241,7 +244,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
               <CardContent className="space-y-4">
                 <Button
                   onClick={handleScanStudent}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800"
                 >
                   <QrCode className="h-4 w-4 mr-2" />
                   Scan QR Code
@@ -253,24 +256,29 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                     value={nisInput}
                     onChange={(e) => setNisInput(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSearchByNIS()}
+                    className="border-emerald-300 focus:border-emerald-500"
                   />
-                  <Button onClick={handleSearchByNIS} variant="outline">
+                  <Button
+                    onClick={handleSearchByNIS}
+                    variant="outline"
+                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
                     Cari
                   </Button>
                 </div>
 
                 {currentStudent && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-blue-800">
+                  <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                    <h3 className="font-semibold text-emerald-800">
                       {currentStudent.name}
                     </h3>
-                    <p className="text-sm text-blue-600">
+                    <p className="text-sm text-emerald-600">
                       NIS: {currentStudent.nis}
                     </p>
-                    <p className="text-sm text-blue-600">
+                    <p className="text-sm text-emerald-600">
                       Kelas: {currentStudent.class}
                     </p>
-                    <p className="font-bold text-green-600 mt-2">
+                    <p className="font-bold text-emerald-700 mt-2">
                       Saldo: {formatCurrency(currentStudent.saldo)}
                     </p>
                   </div>
@@ -279,9 +287,9 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
             </Card>
 
             {/* Shopping Cart */}
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-emerald-800">
                   <ShoppingCart className="h-5 w-5" />
                   <span>Keranjang Belanja</span>
                 </CardTitle>
@@ -296,7 +304,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                     {cart.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between bg-gray-50 p-3 rounded"
+                        className="flex items-center justify-between bg-emerald-50 p-3 rounded border border-emerald-200"
                       >
                         <div className="flex-1">
                           <p className="font-medium">{item.name}</p>
@@ -309,6 +317,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.id, -1)}
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -319,6 +328,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.id, 1)}
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -326,17 +336,17 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                       </div>
                     ))}
 
-                    <div className="border-t pt-3 mt-4">
+                    <div className="border-t border-emerald-200 pt-3 mt-4">
                       <div className="flex justify-between items-center mb-4">
                         <span className="font-bold">Total:</span>
-                        <span className="font-bold text-lg">
+                        <span className="font-bold text-lg text-emerald-700">
                           {formatCurrency(getTotalAmount())}
                         </span>
                       </div>
 
                       <Button
                         onClick={handleCheckout}
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-emerald-700 hover:bg-emerald-800"
                         disabled={!currentStudent || cart.length === 0}
                       >
                         <Receipt className="h-4 w-4 mr-2" />
@@ -351,19 +361,36 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
 
           {/* Right Panel - Products */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
-                <CardTitle>Daftar Produk</CardTitle>
+                <CardTitle className="text-emerald-800">
+                  Daftar Produk
+                </CardTitle>
                 <CardDescription>
                   Pilih produk untuk ditambahkan ke keranjang
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="all" className="space-y-4">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="all">Semua</TabsTrigger>
-                    <TabsTrigger value="makanan">Makanan</TabsTrigger>
-                    <TabsTrigger value="minuman">Minuman</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-3 bg-emerald-50 border-emerald-200">
+                    <TabsTrigger
+                      value="all"
+                      className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+                    >
+                      Semua
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="makanan"
+                      className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+                    >
+                      Makanan
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="minuman"
+                      className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+                    >
+                      Minuman
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="all" className="space-y-4">
@@ -371,7 +398,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                       {products.map((product) => (
                         <Card
                           key={product.id}
-                          className="hover:shadow-md transition-shadow"
+                          className="hover:shadow-lg transition-shadow border-emerald-200"
                         >
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
@@ -382,6 +409,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                                     ? "secondary"
                                     : "destructive"
                                 }
+                                className="bg-emerald-100 text-emerald-800 border-emerald-200"
                               >
                                 Stok: {product.stock}
                               </Badge>
@@ -389,12 +417,12 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                             <p className="text-sm text-gray-600 mb-2">
                               {product.category}
                             </p>
-                            <p className="font-bold text-green-600 mb-3">
+                            <p className="font-bold text-emerald-700 mb-3">
                               {formatCurrency(product.price)}
                             </p>
                             <Button
                               onClick={() => addToCart(product)}
-                              className="w-full"
+                              className="w-full bg-emerald-700 hover:bg-emerald-800"
                               disabled={product.stock === 0}
                             >
                               <Plus className="h-4 w-4 mr-2" />
@@ -413,7 +441,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                         .map((product) => (
                           <Card
                             key={product.id}
-                            className="hover:shadow-md transition-shadow"
+                            className="hover:shadow-lg transition-shadow border-emerald-200"
                           >
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start mb-2">
@@ -426,16 +454,17 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                                       ? "secondary"
                                       : "destructive"
                                   }
+                                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
                                 >
                                   Stok: {product.stock}
                                 </Badge>
                               </div>
-                              <p className="font-bold text-green-600 mb-3">
+                              <p className="font-bold text-emerald-700 mb-3">
                                 {formatCurrency(product.price)}
                               </p>
                               <Button
                                 onClick={() => addToCart(product)}
-                                className="w-full"
+                                className="w-full bg-emerald-700 hover:bg-emerald-800"
                                 disabled={product.stock === 0}
                               >
                                 <Plus className="h-4 w-4 mr-2" />
@@ -454,7 +483,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                         .map((product) => (
                           <Card
                             key={product.id}
-                            className="hover:shadow-md transition-shadow"
+                            className="hover:shadow-lg transition-shadow border-emerald-200"
                           >
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start mb-2">
@@ -467,16 +496,17 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                                       ? "secondary"
                                       : "destructive"
                                   }
+                                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
                                 >
                                   Stok: {product.stock}
                                 </Badge>
                               </div>
-                              <p className="font-bold text-green-600 mb-3">
+                              <p className="font-bold text-emerald-700 mb-3">
                                 {formatCurrency(product.price)}
                               </p>
                               <Button
                                 onClick={() => addToCart(product)}
-                                className="w-full"
+                                className="w-full bg-emerald-700 hover:bg-emerald-800"
                                 disabled={product.stock === 0}
                               >
                                 <Plus className="h-4 w-4 mr-2" />

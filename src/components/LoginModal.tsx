@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,126 +64,181 @@ const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold text-gray-800">
-            Masuk ke Sistem POS
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-4xl p-0 overflow-hidden">
+        <DialogTitle className="sr-only">Sistem POS Kantin - Login</DialogTitle>
+        <div className="flex">
+          {/* Left Side - Header & Quick Login */}
+          <div className="flex-1 bg-gradient-to-br from-green-700 to-green-600 p-8 text-white">
+            <div className="h-full flex flex-col justify-center">
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold mb-2">
+                  🏫 Sistem POS Kantin
+                </h1>
+                <p className="text-green-100 text-lg">
+                  Silakan pilih role untuk masuk ke sistem
+                </p>
+              </div>
 
-        <div className="space-y-6">
-          {/* Quick Demo Login */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-center">
-              Demo Login Cepat
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleQuickLogin("student")}
-              >
-                <CardContent className="p-4 text-center">
-                  <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                  <p className="font-medium text-blue-600">Siswa</p>
-                  <p className="text-xs text-gray-500">Ahmad Rizki</p>
-                </CardContent>
-              </Card>
+              {/* Quick Demo Login */}
+              <div>
+                <h3 className="text-xl font-semibold mb-6 text-center flex items-center justify-center">
+                  <span className="mr-2">⚡</span>
+                  Login Cepat (Demo)
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card
+                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 hover:border-green-300 bg-white/10 backdrop-blur-sm"
+                    onClick={() => handleQuickLogin("student")}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <div className="bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                        <Users className="h-7 w-7 text-white" />
+                      </div>
+                      <p className="font-semibold text-white text-lg">Siswa</p>
+                      <p className="text-green-100 text-sm">Ahmad Rizki</p>
+                      <p className="text-green-200 font-medium text-xs">
+                        Saldo: Rp 50.000
+                      </p>
+                    </CardContent>
+                  </Card>
 
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleQuickLogin("cashier")}
-              >
-                <CardContent className="p-4 text-center">
-                  <ShoppingCart className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                  <p className="font-medium text-green-600">Kasir</p>
-                  <p className="text-xs text-gray-500">Siti Kasir</p>
-                </CardContent>
-              </Card>
+                  <Card
+                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 hover:border-yellow-300 bg-white/10 backdrop-blur-sm"
+                    onClick={() => handleQuickLogin("cashier")}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <div className="bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                        <ShoppingCart className="h-7 w-7 text-white" />
+                      </div>
+                      <p className="font-semibold text-white text-lg">Kasir</p>
+                      <p className="text-green-100 text-sm">Siti Kasir</p>
+                      <p className="text-green-200 font-medium text-xs">
+                        KSR001
+                      </p>
+                    </CardContent>
+                  </Card>
 
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleQuickLogin("admin")}
-              >
-                <CardContent className="p-4 text-center">
-                  <BarChart3 className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-                  <p className="font-medium text-orange-600">Admin</p>
-                  <p className="text-xs text-gray-500">Pak Admin</p>
-                </CardContent>
-              </Card>
+                  <Card
+                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 hover:border-amber-300 bg-white/10 backdrop-blur-sm"
+                    onClick={() => handleQuickLogin("admin")}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <div className="bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                        <BarChart3 className="h-7 w-7 text-white" />
+                      </div>
+                      <p className="font-semibold text-white text-lg">Admin</p>
+                      <p className="text-green-100 text-sm">Pak Admin</p>
+                      <p className="text-green-200 font-medium text-xs">
+                        ADM001
+                      </p>
+                    </CardContent>
+                  </Card>
 
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleQuickLogin("parent")}
-              >
-                <CardContent className="p-4 text-center">
-                  <CreditCard className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-                  <p className="font-medium text-purple-600">Orang Tua</p>
-                  <p className="text-xs text-gray-500">Ibu Wati</p>
-                </CardContent>
-              </Card>
+                  <Card
+                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 hover:border-amber-300 bg-white/10 backdrop-blur-sm"
+                    onClick={() => handleQuickLogin("parent")}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <div className="bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                        <CreditCard className="h-7 w-7 text-white" />
+                      </div>
+                      <p className="font-semibold text-white text-lg">
+                        Orang Tua
+                      </p>
+                      <p className="text-green-100 text-sm">Ibu Wati</p>
+                      <p className="text-green-200 font-medium text-xs">
+                        PRT001
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Manual Login Form */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4 text-center">
-              Login Manual
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="role">Pilih Role</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih role Anda" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="student">Siswa</SelectItem>
-                    <SelectItem value="cashier">Kasir</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="parent">Orang Tua</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* Right Side - Manual Login Form */}
+          <div className="flex-1 p-8 bg-amber-50">
+            <div className="h-full flex flex-col justify-center">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-green-800 mb-2">
+                  🔐 Login Manual
+                </h2>
+                <p className="text-green-700">
+                  Masukkan kredensial Anda untuk masuk ke sistem
+                </p>
               </div>
 
-              <div>
-                <Label htmlFor="identifier">
-                  {selectedRole === "student" ? "NIS" : "Email/Username"}
-                </Label>
-                <Input
-                  id="identifier"
-                  type="text"
-                  placeholder={
-                    selectedRole === "student"
-                      ? "Masukkan NIS"
-                      : "Masukkan email atau username"
-                  }
-                  value={loginData.identifier}
-                  onChange={(e) =>
-                    setLoginData({ ...loginData, identifier: e.target.value })
-                  }
-                />
-              </div>
+              <div className="space-y-6">
+                <div>
+                  <Label
+                    htmlFor="role"
+                    className="text-green-700 font-medium text-sm"
+                  >
+                    Pilih Role
+                  </Label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole}>
+                    <SelectTrigger className="mt-2 h-12">
+                      <SelectValue placeholder="Pilih role Anda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">👨‍🎓 Siswa</SelectItem>
+                      <SelectItem value="cashier">🛒 Kasir</SelectItem>
+                      <SelectItem value="admin">👨‍💼 Admin</SelectItem>
+                      <SelectItem value="parent">👨‍👩‍👧‍👦 Orang Tua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Masukkan password"
-                  value={loginData.password}
-                  onChange={(e) =>
-                    setLoginData({ ...loginData, password: e.target.value })
-                  }
-                />
-              </div>
+                <div>
+                  <Label
+                    htmlFor="identifier"
+                    className="text-green-700 font-medium text-sm"
+                  >
+                    {selectedRole === "student" ? "NIS" : "Email/Username"}
+                  </Label>
+                  <Input
+                    id="identifier"
+                    type="text"
+                    placeholder={
+                      selectedRole === "student"
+                        ? "Masukkan NIS"
+                        : "Masukkan email atau username"
+                    }
+                    value={loginData.identifier}
+                    onChange={(e) =>
+                      setLoginData({ ...loginData, identifier: e.target.value })
+                    }
+                    className="mt-2 h-12"
+                  />
+                </div>
 
-              <Button
-                onClick={handleManualLogin}
-                className="w-full bg-green-600 hover:bg-green-700"
-                disabled={!selectedRole || !loginData.identifier}
-              >
-                Masuk
-              </Button>
+                <div>
+                  <Label
+                    htmlFor="password"
+                    className="text-green-700 font-medium text-sm"
+                  >
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Masukkan password"
+                    value={loginData.password}
+                    onChange={(e) =>
+                      setLoginData({ ...loginData, password: e.target.value })
+                    }
+                    className="mt-2 h-12"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleManualLogin}
+                  className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-4 rounded-lg transition-all duration-200 hover:shadow-lg text-lg"
+                  disabled={!selectedRole || !loginData.identifier}
+                >
+                  🚀 Masuk ke Sistem
+                </Button>
+              </div>
             </div>
           </div>
         </div>

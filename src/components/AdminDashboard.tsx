@@ -115,13 +115,13 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
       {/* Header */}
-      <header className="bg-white shadow-md border-b-4 border-orange-500">
+      <header className="bg-white shadow-lg border-b-4 border-emerald-700">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-orange-500 p-2 rounded-full">
+              <div className="bg-emerald-700 p-2 rounded-full">
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -134,7 +134,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
             <Button
               onClick={onLogout}
               variant="outline"
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 border-emerald-700 text-emerald-700 hover:bg-emerald-700 hover:text-white"
             >
               <LogOut className="h-4 w-4" />
               <span>Keluar</span>
@@ -146,58 +146,58 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
       <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="border-emerald-200 hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Total Siswa</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-emerald-700">
                     {students.length}
                   </p>
                 </div>
-                <Users className="h-8 w-8 text-blue-500" />
+                <Users className="h-8 w-8 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-emerald-200 hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Penjualan Hari Ini</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-emerald-700">
                     {formatCurrency(getTotalSales())}
                   </p>
                 </div>
-                <ShoppingCart className="h-8 w-8 text-green-500" />
+                <ShoppingCart className="h-8 w-8 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-emerald-200 hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Total Saldo Siswa</p>
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="text-2xl font-bold text-emerald-700">
                     {formatCurrency(getTotalBalance())}
                   </p>
                 </div>
-                <CreditCard className="h-8 w-8 text-purple-500" />
+                <CreditCard className="h-8 w-8 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-emerald-200 hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Transaksi Hari Ini</p>
-                  <p className="text-2xl font-bold text-orange-600">
+                  <p className="text-2xl font-bold text-emerald-700">
                     {transactions.length}
                   </p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-orange-500" />
+                <BarChart3 className="h-8 w-8 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
@@ -205,25 +205,47 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
         {/* Main Content */}
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="students">Manajemen Siswa</TabsTrigger>
-            <TabsTrigger value="transactions">Laporan Transaksi</TabsTrigger>
-            <TabsTrigger value="reports">Laporan Harian</TabsTrigger>
-            <TabsTrigger value="settings">Pengaturan</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-emerald-50 border-emerald-200">
+            <TabsTrigger
+              value="students"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Manajemen Siswa
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Laporan Transaksi
+            </TabsTrigger>
+            <TabsTrigger
+              value="reports"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Laporan Harian
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Pengaturan
+            </TabsTrigger>
           </TabsList>
 
           {/* Students Management */}
           <TabsContent value="students">
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Manajemen Data Siswa</CardTitle>
+                    <CardTitle className="text-emerald-800">
+                      Manajemen Data Siswa
+                    </CardTitle>
                     <CardDescription>
                       Kelola data siswa dan saldo mereka
                     </CardDescription>
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button className="bg-emerald-700 hover:bg-emerald-800">
                     <Plus className="h-4 w-4 mr-2" />
                     Tambah Siswa
                   </Button>
@@ -234,7 +256,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                   {students.map((student) => (
                     <div
                       key={student.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center space-x-4">
@@ -250,7 +272,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
-                          <p className="font-bold text-green-600">
+                          <p className="font-bold text-emerald-700">
                             {formatCurrency(student.saldo)}
                           </p>
                           <Badge
@@ -259,15 +281,24 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                                 ? "default"
                                 : "secondary"
                             }
+                            className="bg-emerald-100 text-emerald-800 border-emerald-200"
                           >
                             {student.status === "active" ? "Aktif" : "Nonaktif"}
                           </Badge>
                         </div>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                          >
                             Top Up
                           </Button>
                         </div>
@@ -281,16 +312,21 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
           {/* Transactions */}
           <TabsContent value="transactions">
-            <Card>
+            <Card className="border-emerald-200">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Laporan Transaksi</CardTitle>
+                    <CardTitle className="text-emerald-800">
+                      Laporan Transaksi
+                    </CardTitle>
                     <CardDescription>
                       Riwayat semua transaksi siswa
                     </CardDescription>
                   </div>
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Export Excel
                   </Button>
@@ -301,7 +337,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                   {transactions.map((transaction) => (
                     <div
                       key={transaction.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center space-x-4">
@@ -319,7 +355,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-red-600">
+                        <p className="font-bold text-emerald-700">
                           {formatCurrency(transaction.amount)}
                         </p>
                         <p className="text-sm text-gray-500">
@@ -336,9 +372,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
           {/* Reports */}
           <TabsContent value="reports">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card>
+              <Card className="border-emerald-200">
                 <CardHeader>
-                  <CardTitle>Laporan Penjualan Harian</CardTitle>
+                  <CardTitle className="text-emerald-800">
+                    Laporan Penjualan Harian
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -348,7 +386,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                     </div>
                     <div className="flex justify-between">
                       <span>Total Penjualan:</span>
-                      <span className="font-bold text-green-600">
+                      <span className="font-bold text-emerald-700">
                         {formatCurrency(getTotalSales())}
                       </span>
                     </div>
@@ -359,34 +397,47 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                       </span>
                     </div>
                   </div>
-                  <Button className="w-full mt-4" variant="outline">
+                  <Button
+                    className="w-full mt-4 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                    variant="outline"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download Laporan PDF
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-emerald-200">
                 <CardHeader>
-                  <CardTitle>Top Produk Terlaris</CardTitle>
+                  <CardTitle className="text-emerald-800">
+                    Top Produk Terlaris
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span>Nasi Gudeg</span>
-                      <Badge>15 terjual</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                        15 terjual
+                      </Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span>Mie Ayam</span>
-                      <Badge>12 terjual</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                        12 terjual
+                      </Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span>Es Teh</span>
-                      <Badge>20 terjual</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                        20 terjual
+                      </Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span>Jus Jeruk</span>
-                      <Badge>8 terjual</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                        8 terjual
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -397,9 +448,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
           {/* Settings */}
           <TabsContent value="settings">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card>
+              <Card className="border-emerald-200">
                 <CardHeader>
-                  <CardTitle>Pengaturan Sistem</CardTitle>
+                  <CardTitle className="text-emerald-800">
+                    Pengaturan Sistem
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -407,26 +460,41 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                     <Input
                       id="school-name"
                       defaultValue="SMA Negeri 1 Jakarta"
+                      className="border-emerald-300 focus:border-emerald-500"
                     />
                   </div>
                   <div>
                     <Label htmlFor="canteen-name">Nama Kantin</Label>
-                    <Input id="canteen-name" defaultValue="Kantin Sekolah" />
+                    <Input
+                      id="canteen-name"
+                      defaultValue="Kantin Sekolah"
+                      className="border-emerald-300 focus:border-emerald-500"
+                    />
                   </div>
-                  <Button>Simpan Pengaturan</Button>
+                  <Button className="bg-emerald-700 hover:bg-emerald-800">
+                    Simpan Pengaturan
+                  </Button>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-emerald-200">
                 <CardHeader>
-                  <CardTitle>Backup & Restore</CardTitle>
+                  <CardTitle className="text-emerald-800">
+                    Backup & Restore
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Backup Database
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                  >
                     Restore Database
                   </Button>
                 </CardContent>

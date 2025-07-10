@@ -70,176 +70,288 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-amber-50 to-yellow-50">
       {/* Header */}
-      <header className="bg-white shadow-md border-b-4 border-green-500">
-        <div className="container mx-auto px-4 py-6">
+      <header className="bg-amber-50/90 backdrop-blur-md shadow-sm border-b border-green-200 sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-green-500 p-3 rounded-full">
+            <div className="flex items-center space-x-4">
+              <div className="bg-green-700 p-3 rounded-xl shadow-md">
                 <Wallet className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-2xl font-bold text-green-800">
                   POS Kantin Sekolah
                 </h1>
-                <p className="text-gray-600">Sistem Saldo Digital Siswa</p>
+                <p className="text-green-600 text-sm">
+                  Sistem Saldo Digital Terpercaya
+                </p>
               </div>
             </div>
             <Button
               onClick={() => setShowLogin(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium"
+              className="bg-green-700 hover:bg-green-800 text-white px-8 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300"
             >
-              Masuk
+              🚀 Mulai Sekarang
             </Button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold text-gray-800 mb-6">
-            Sistem POS Modern untuk Kantin Sekolah
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Kelola transaksi kantin dengan mudah menggunakan sistem saldo
-            digital yang aman dan efisien
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Badge variant="secondary" className="px-4 py-2 text-lg">
-              <QrCode className="h-5 w-5 mr-2" />
-              QR Scanner
-            </Badge>
-            <Badge variant="secondary" className="px-4 py-2 text-lg">
-              <CreditCard className="h-5 w-5 mr-2" />
-              Saldo Digital
-            </Badge>
-            <Badge variant="secondary" className="px-4 py-2 text-lg">
-              <BarChart3 className="h-5 w-5 mr-2" />
-              Laporan Real-time
-            </Badge>
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-amber-500/5"></div>
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="inline-flex items-center space-x-2 bg-amber-50/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-md mb-8">
+              <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+              <span className="text-sm font-medium text-green-700">
+                Sistem Terdepan 2024
+              </span>
+            </div>
+            <h2 className="text-5xl md:text-6xl font-bold mb-8">
+              <span className="text-green-700">Revolusi Kantin</span>
+              <br />
+              <span className="text-green-800">Sekolah Digital</span>
+            </h2>
+            <p className="text-xl text-green-700 mb-10 max-w-3xl mx-auto leading-relaxed">
+              Transformasi sistem kantin tradisional menjadi platform digital
+              yang aman, efisien, dan mudah digunakan oleh semua pihak
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+              <Badge
+                variant="secondary"
+                className="px-6 py-3 text-base bg-amber-50/90 backdrop-blur-sm border border-green-200"
+              >
+                <QrCode className="h-5 w-5 mr-2" />
+                QR Scanner Pro
+              </Badge>
+              <Badge
+                variant="secondary"
+                className="px-6 py-3 text-base bg-amber-50/90 backdrop-blur-sm border border-green-200"
+              >
+                <CreditCard className="h-5 w-5 mr-2" />
+                Saldo Digital
+              </Badge>
+              <Badge
+                variant="secondary"
+                className="px-6 py-3 text-base bg-amber-50/90 backdrop-blur-sm border border-green-200"
+              >
+                <BarChart3 className="h-5 w-5 mr-2" />
+                Analytics Real-time
+              </Badge>
+            </div>
+            <Button
+              onClick={() => setShowLogin(true)}
+              size="lg"
+              className="bg-green-700 hover:bg-green-800 text-white px-10 py-4 text-xl font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              🎯 Coba Sekarang
+            </Button>
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <h3 className="text-3xl font-bold text-center text-gray-800 mb-12">
-            Fitur Utama Aplikasi
-          </h3>
+      <section className="py-20 bg-amber-50/60 backdrop-blur-sm">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h3 className="text-4xl font-bold text-green-800 mb-4">
+              Platform Lengkap untuk Semua
+            </h3>
+            <p className="text-xl text-green-700 max-w-2xl mx-auto">
+              Setiap role memiliki interface yang disesuaikan dengan kebutuhan
+              dan kemudahan penggunaan
+            </p>
+          </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Student Module */}
-            <Card className="hover:shadow-lg transition-shadow duration-300 border-l-4 border-l-blue-500">
-              <CardHeader className="text-center">
-                <div className="mx-auto bg-blue-100 p-3 rounded-full w-fit mb-4">
-                  <Users className="h-8 w-8 text-blue-600" />
+            <Card className="group hover:shadow-xl transition-all duration-500 hover:scale-105 border-0 bg-amber-50/90 backdrop-blur-sm shadow-md">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto bg-green-700 p-4 rounded-2xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-blue-600">Modul Siswa</CardTitle>
+                <CardTitle className="text-green-700 text-xl">
+                  Modul Siswa
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Login dengan NIS, cek saldo, dan lihat riwayat pembelian
+              <CardContent className="text-center">
+                <CardDescription className="text-green-700 mb-6">
+                  Akses mudah dengan NIS, pantau saldo real-time, dan kelola
+                  pembelian
                 </CardDescription>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li>• Login dengan NIS</li>
-                  <li>• Cek saldo real-time</li>
-                  <li>• Histori pembelian</li>
-                  <li>• QR Code pribadi</li>
-                </ul>
+                <div className="space-y-3 text-sm text-green-700">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                    <span>Login dengan NIS</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                    <span>Saldo real-time</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                    <span>Histori pembelian</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                    <span>QR Code pribadi</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Cashier Module */}
-            <Card className="hover:shadow-lg transition-shadow duration-300 border-l-4 border-l-green-500">
-              <CardHeader className="text-center">
-                <div className="mx-auto bg-green-100 p-3 rounded-full w-fit mb-4">
-                  <ShoppingCart className="h-8 w-8 text-green-600" />
+            <Card className="group hover:shadow-xl transition-all duration-500 hover:scale-105 border-0 bg-amber-50/90 backdrop-blur-sm shadow-md">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto bg-yellow-500 p-4 rounded-2xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <ShoppingCart className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-green-600">Kasir POS</CardTitle>
+                <CardTitle className="text-yellow-600 text-xl">
+                  Kasir POS
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Interface kasir dengan scanner QR dan checkout otomatis
+              <CardContent className="text-center">
+                <CardDescription className="text-green-700 mb-6">
+                  Interface kasir modern dengan scanner QR dan checkout otomatis
                 </CardDescription>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li>• Scan QR siswa</li>
-                  <li>• Pilih produk & jumlah</li>
-                  <li>• Checkout otomatis</li>
-                  <li>• Cetak struk</li>
-                </ul>
+                <div className="space-y-3 text-sm text-green-700">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span>Scan QR siswa</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span>Pilih produk & jumlah</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span>Checkout otomatis</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span>Cetak struk</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Parent/Top-up Module */}
-            <Card className="hover:shadow-lg transition-shadow duration-300 border-l-4 border-l-purple-500">
-              <CardHeader className="text-center">
-                <div className="mx-auto bg-purple-100 p-3 rounded-full w-fit mb-4">
-                  <CreditCard className="h-8 w-8 text-purple-600" />
+            <Card className="group hover:shadow-xl transition-all duration-500 hover:scale-105 border-0 bg-amber-50/90 backdrop-blur-sm shadow-md">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto bg-amber-500 p-4 rounded-2xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <CreditCard className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-purple-600">Top Up Saldo</CardTitle>
+                <CardTitle className="text-amber-600 text-xl">
+                  Top Up Saldo
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Sistem top-up saldo untuk orang tua dan admin
+              <CardContent className="text-center">
+                <CardDescription className="text-green-700 mb-6">
+                  Sistem top-up saldo yang aman dan terpercaya untuk orang tua
                 </CardDescription>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li>• Top-up ke siswa</li>
-                  <li>• Riwayat top-up</li>
-                  <li>• Konfirmasi real-time</li>
-                  <li>• Notifikasi berhasil</li>
-                </ul>
+                <div className="space-y-3 text-sm text-green-700">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span>Top-up ke siswa</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span>Riwayat top-up</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span>Konfirmasi real-time</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span>Notifikasi berhasil</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Admin Module */}
-            <Card className="hover:shadow-lg transition-shadow duration-300 border-l-4 border-l-orange-500">
-              <CardHeader className="text-center">
-                <div className="mx-auto bg-orange-100 p-3 rounded-full w-fit mb-4">
-                  <BarChart3 className="h-8 w-8 text-orange-600" />
+            <Card className="group hover:shadow-xl transition-all duration-500 hover:scale-105 border-0 bg-amber-50/90 backdrop-blur-sm shadow-md">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto bg-green-600 p-4 rounded-2xl w-fit mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <BarChart3 className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-orange-600">
+                <CardTitle className="text-green-600 text-xl">
                   Dashboard Admin
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Panel admin untuk manajemen dan laporan komprehensif
+              <CardContent className="text-center">
+                <CardDescription className="text-green-700 mb-6">
+                  Panel admin komprehensif untuk manajemen dan analisis data
                 </CardDescription>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li>• Manajemen siswa</li>
-                  <li>• Laporan harian</li>
-                  <li>• Histori transaksi</li>
-                  <li>• Export data</li>
-                </ul>
+                <div className="space-y-3 text-sm text-green-700">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Manajemen siswa</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Laporan harian</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Histori transaksi</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Export data</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Demo Section */}
-      <section className="py-16 bg-gradient-to-r from-green-500 to-blue-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h3 className="text-3xl font-bold mb-6">Siap Mencoba Aplikasi?</h3>
-          <p className="text-xl mb-8 opacity-90">
-            Klik tombol Masuk untuk mengakses aplikasi dengan role yang berbeda
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-green-700 via-green-600 to-green-500 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="container mx-auto px-6 relative z-10 text-center">
+          <h3 className="text-4xl md:text-5xl font-bold mb-6">
+            Siap untuk Revolusi Digital?
+          </h3>
+          <p className="text-xl mb-10 opacity-90 max-w-3xl mx-auto">
+            Bergabunglah dengan ratusan sekolah yang telah menggunakan sistem
+            POS digital kami
           </p>
-          <Button
-            onClick={() => setShowLogin(true)}
-            size="lg"
-            className="bg-white text-green-600 hover:bg-gray-100 px-8 py-4 text-lg font-medium"
-          >
-            Mulai Sekarang
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              size="lg"
+              className="bg-white text-green-700 hover:bg-gray-100 px-10 py-4 text-xl font-semibold rounded-xl transition-all duration-300 shadow-lg"
+            >
+              📞 Hubungi Kami
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2024 POS Kantin Sekolah. Sistem Saldo Digital Siswa.</p>
+      <footer className="bg-green-800 text-white py-12">
+        <div className="container mx-auto px-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-3 mb-6">
+              <div className="bg-amber-500 p-3 rounded-xl">
+                <Wallet className="h-8 w-8 text-white" />
+              </div>
+              <h4 className="text-2xl font-bold">POS Kantin Sekolah</h4>
+            </div>
+            <p className="text-green-100 mb-4">
+              Sistem saldo digital terpercaya untuk kantin sekolah modern
+            </p>
+            <div className="flex justify-center space-x-6 text-sm text-green-200">
+              <span>© 2024 POS Kantin Sekolah</span>
+              <span>•</span>
+              <span>Privacy Policy</span>
+              <span>•</span>
+              <span>Terms of Service</span>
+            </div>
+          </div>
         </div>
       </footer>
 
