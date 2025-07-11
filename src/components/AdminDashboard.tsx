@@ -135,6 +135,15 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   const [settings, setSettings] = useState({ schoolName: "", canteenName: "" });
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  // Tambahkan state untuk modal detail
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [showStudentDetail, setShowStudentDetail] = useState(false);
+  const [selectedParent, setSelectedParent] = useState<any | null>(null);
+  const [showParentDetail, setShowParentDetail] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
+    null
+  );
+  const [showTransactionDetail, setShowTransactionDetail] = useState(false);
 
   // Fetch settings saat buka tab
   useEffect(() => {
@@ -550,6 +559,10 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                                       size="sm"
                                       variant="outline"
                                       className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                      onClick={() => {
+                                        setSelectedStudent(s);
+                                        setShowStudentDetail(true);
+                                      }}
                                     >
                                       <Eye className="h-4 w-4" />
                                     </Button>
@@ -615,6 +628,10 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                                 size="sm"
                                 variant="outline"
                                 className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                onClick={() => {
+                                  setSelectedParent(p);
+                                  setShowParentDetail(true);
+                                }}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -747,6 +764,17 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                                   ).toLocaleString("id-ID")
                                 : "")}
                           </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 mt-2"
+                            onClick={() => {
+                              setSelectedTransaction(transaction);
+                              setShowTransactionDetail(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -1630,6 +1658,126 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               Simpan Perubahan
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Detail Siswa */}
+      <Dialog open={showStudentDetail} onOpenChange={setShowStudentDetail}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-emerald-800">Detail Siswa</DialogTitle>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <span className="font-semibold text-gray-700">Nama</span>
+                <span className="text-gray-900">{selectedStudent.name}</span>
+                <span className="font-semibold text-gray-700">NIS</span>
+                <span className="text-gray-900">{selectedStudent.nis}</span>
+                <span className="font-semibold text-gray-700">Kelas</span>
+                <span className="text-gray-900">{selectedStudent.class}</span>
+                <span className="font-semibold text-gray-700">Grade</span>
+                <span className="text-gray-900">{selectedStudent.grade}</span>
+                <span className="font-semibold text-gray-700">Saldo</span>
+                <span className="text-gray-900">
+                  {formatCurrency(selectedStudent.saldo)}
+                </span>
+                <span className="font-semibold text-gray-700">Status</span>
+                <span className="text-gray-900">{selectedStudent.status}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Modal Detail Orang Tua */}
+      <Dialog open={showParentDetail} onOpenChange={setShowParentDetail}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-emerald-800">
+              Detail Orang Tua
+            </DialogTitle>
+          </DialogHeader>
+          {selectedParent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <span className="font-semibold text-gray-700">Nama</span>
+                <span className="text-gray-900">{selectedParent.name}</span>
+                <span className="font-semibold text-gray-700">Email</span>
+                <span className="text-gray-900">{selectedParent.email}</span>
+                <span className="font-semibold text-gray-700">Telepon</span>
+                <span className="text-gray-900">
+                  {selectedParent.parent?.phone || "-"}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-gray-700">Anak:</span>
+                <ul className="list-disc ml-6 mt-1 text-gray-900">
+                  {selectedParent.parent?.parentStudents?.map((ps: any) => (
+                    <li key={ps.studentId}>{ps.student?.user?.name || "-"}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Modal Detail Transaksi */}
+      <Dialog
+        open={showTransactionDetail}
+        onOpenChange={setShowTransactionDetail}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-emerald-800">
+              Detail Transaksi
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <span className="font-semibold text-gray-700">Nama Siswa</span>
+                <span className="text-gray-900">
+                  {selectedTransaction.student?.name}
+                </span>
+                <span className="font-semibold text-gray-700">Kasir</span>
+                <span className="text-gray-900">
+                  {selectedTransaction.cashier?.user?.name || "-"}
+                </span>
+                <span className="font-semibold text-gray-700">Waktu</span>
+                <span className="text-gray-900">
+                  {selectedTransaction.date ||
+                    (selectedTransaction.createdAt
+                      ? new Date(selectedTransaction.createdAt).toLocaleString(
+                          "id-ID"
+                        )
+                      : "")}
+                </span>
+                <span className="font-semibold text-gray-700">Jumlah</span>
+                <span className="text-gray-900">
+                  {formatCurrency(
+                    Number(
+                      selectedTransaction.amount ||
+                        selectedTransaction.totalAmount ||
+                        0
+                    )
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-gray-700">Item:</span>
+                <ul className="list-disc ml-6 mt-1 text-gray-900">
+                  {Array.isArray(selectedTransaction.items) ? (
+                    selectedTransaction.items.map((item: any, idx: number) => (
+                      <li key={idx}>
+                        {item.product?.name || item.name} x{item.quantity}
+                      </li>
+                    ))
+                  ) : (
+                    <li>{selectedTransaction.items}</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
