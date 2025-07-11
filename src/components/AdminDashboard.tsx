@@ -29,6 +29,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AdminDashboardProps {
   user: { name: string };
@@ -60,6 +67,93 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     id: string | null;
   }>({ open: false, id: null });
   const [rejectReason, setRejectReason] = useState("");
+  const [addModalType, setAddModalType] = useState<
+    null | "student" | "parent" | "cashier"
+  >(null);
+  const [newStudent, setNewStudent] = useState({
+    name: "",
+    email: "",
+    password: "",
+    nis: "",
+    grade: "",
+    class: "",
+    classNumber: "",
+  });
+  // Tipe untuk newParent
+  type NewParentType = {
+    name: string;
+    email: string;
+    password: string;
+    selectedStudentId: string;
+    studentIds: string[];
+    nik: string;
+    phone: string;
+    address: string;
+  };
+  const [newParent, setNewParent] = useState<NewParentType>({
+    name: "",
+    email: "",
+    password: "",
+    selectedStudentId: "",
+    studentIds: [],
+    nik: "",
+    phone: "",
+    address: "",
+  });
+  // Tipe untuk newCashier
+  type NewCashierType = {
+    name: string;
+    email: string;
+    password: string;
+    nip: string;
+    shifts: string[];
+  };
+  const [newCashier, setNewCashier] = useState<NewCashierType>({
+    name: "",
+    email: "",
+    password: "",
+    nip: "",
+    shifts: [],
+  });
+  const [addCashierLoading, setAddCashierLoading] = useState(false);
+  const [addStudentLoading, setAddStudentLoading] = useState(false);
+  const [addParentLoading, setAddParentLoading] = useState(false);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  // Tambahkan state untuk parent dan cashier
+  type ParentType = any; // Ganti dengan tipe yang sesuai jika ada
+  type CashierType = any;
+  const [parents, setParents] = useState<ParentType[]>([]);
+  const [loadingParents, setLoadingParents] = useState(true);
+  const [errorParents, setErrorParents] = useState<string | null>(null);
+  const [cashiers, setCashiers] = useState<CashierType[]>([]);
+  const [loadingCashiers, setLoadingCashiers] = useState(true);
+  const [errorCashiers, setErrorCashiers] = useState<string | null>(null);
+  // Buat state untuk editParent dan modalEditParent
+  const [editParent, setEditParent] = useState<any>(null);
+  const [modalEditParent, setModalEditParent] = useState(false);
+  // State untuk settings
+  const [settings, setSettings] = useState({ schoolName: "", canteenName: "" });
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // Fetch settings saat buka tab
+  useEffect(() => {
+    async function fetchSettings() {
+      setLoadingSettings(true);
+      try {
+        const res = await fetch("/api/settings");
+        const data = await res.json();
+        if (data)
+          setSettings({
+            schoolName: data.schoolName || "",
+            canteenName: data.canteenName || "",
+          });
+      } finally {
+        setLoadingSettings(false);
+      }
+    }
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     async function fetchStudents() {
@@ -129,6 +223,56 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     fetchTopups();
   }, []);
 
+  // Fetch all students for parent dropdown
+  useEffect(() => {
+    async function fetchAllStudents() {
+      try {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        setAllStudents(data);
+      } catch {}
+    }
+    fetchAllStudents();
+  }, []);
+
+  // Tambah fungsi fetchParents agar bisa dipanggil ulang
+  const fetchParents = async () => {
+    setLoadingParents(true);
+    setErrorParents(null);
+    try {
+      const res = await fetch("/api/users?role=PARENT");
+      const data = await res.json();
+      setParents(data);
+    } catch (e: any) {
+      setErrorParents("Gagal memuat orang tua");
+    } finally {
+      setLoadingParents(false);
+    }
+  };
+
+  // Ganti useEffect fetchParents
+  useEffect(() => {
+    fetchParents();
+  }, []);
+
+  // Fetch cashiers
+  useEffect(() => {
+    async function fetchCashiers() {
+      setLoadingCashiers(true);
+      setErrorCashiers(null);
+      try {
+        const res = await fetch("/api/users?role=CASHIER");
+        const data = await res.json();
+        setCashiers(data);
+      } catch (e: any) {
+        setErrorCashiers("Gagal memuat kasir");
+      } finally {
+        setLoadingCashiers(false);
+      }
+    }
+    fetchCashiers();
+  }, []);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -180,6 +324,8 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
       setRejectReason("");
     }
   }
+
+  // Hapus handler backup dan restore
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
@@ -293,7 +439,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               value="students"
               className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
             >
-              Manajemen Siswa
+              Manajemen Data
             </TabsTrigger>
             <TabsTrigger
               value="transactions"
@@ -322,81 +468,201 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-emerald-800">
-                      Manajemen Data Siswa
+                      Manajemen Data
                     </CardTitle>
                     <CardDescription>
-                      Kelola data siswa dan saldo mereka
+                      Kelola data siswa, orang tua, dan kasir
                     </CardDescription>
                   </div>
-                  <Button className="bg-emerald-700 hover:bg-emerald-800">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Tambah Siswa
-                  </Button>
+                  <Select
+                    onValueChange={(val) =>
+                      setAddModalType(val as "student" | "parent" | "cashier")
+                    }
+                    value={addModalType || ""}
+                  >
+                    <SelectTrigger className="w-[170px] bg-emerald-700 text-white hover:bg-emerald-800 focus:ring-emerald-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Tambah Data" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">Tambah Siswa</SelectItem>
+                      <SelectItem value="parent">Tambah Orang Tua</SelectItem>
+                      <SelectItem value="cashier">Tambah Kasir</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent>
-                {loadingStudents ? (
-                  <p>Loading students...</p>
-                ) : errorStudents ? (
-                  <p className="text-red-500">{errorStudents}</p>
-                ) : (
-                  <div className="space-y-4">
-                    {students.map((student) => (
-                      <div
-                        key={student.id}
-                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-4">
+                <Tabs defaultValue="tab-siswa" className="space-y-4">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="tab-siswa">Siswa</TabsTrigger>
+                    <TabsTrigger value="tab-parent">Orang Tua</TabsTrigger>
+                    <TabsTrigger value="tab-cashier">Kasir</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="tab-siswa">
+                    {loadingStudents ? (
+                      <p>Loading students...</p>
+                    ) : errorStudents ? (
+                      <p className="text-red-500">{errorStudents}</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {students
+                          .filter((u) => u.role === "STUDENT" && u.student)
+                          .map((u) => {
+                            const s = u.student;
+                            return (
+                              <div
+                                key={s.id}
+                                className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-4">
+                                    <div>
+                                      <p className="font-semibold text-gray-800">
+                                        {s.name}
+                                      </p>
+                                      <p className="text-sm text-gray-600">
+                                        NIS: {s.nis} • Kelas: {s.class}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                  <div className="text-right">
+                                    <p className="font-bold text-emerald-700">
+                                      {formatCurrency(s.saldo)}
+                                    </p>
+                                    <Badge
+                                      variant={
+                                        s.status === "ACTIVE"
+                                          ? "default"
+                                          : "secondary"
+                                      }
+                                      className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                                    >
+                                      {s.status === "ACTIVE"
+                                        ? "Aktif"
+                                        : "Nonaktif"}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                    >
+                                      Top Up
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="tab-parent">
+                    {loadingParents ? (
+                      <p>Loading orang tua...</p>
+                    ) : errorParents ? (
+                      <p className="text-red-500">{errorParents}</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {parents.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                          >
                             <div>
                               <p className="font-semibold text-gray-800">
-                                {student.name}
+                                {p.name}
                               </p>
                               <p className="text-sm text-gray-600">
-                                NIS: {student.nis} • Kelas: {student.class}
+                                Telepon: {p.parent?.phone || "-"}
+                              </p>
+                              {p.parent?.parentStudents?.length > 0 && (
+                                <div className="text-sm text-gray-600">
+                                  Anak:
+                                  <ul className="list-disc ml-4">
+                                    {p.parent.parentStudents.map((ps: any) => (
+                                      <li key={ps.studentId}>
+                                        {ps.student?.user?.name || "-"}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditParent(p);
+                                  setModalEditParent(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                              >
+                                Top Up
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="tab-cashier">
+                    {loadingCashiers ? (
+                      <p>Loading kasir...</p>
+                    ) : errorCashiers ? (
+                      <p className="text-red-500">{errorCashiers}</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {cashiers.map((c) => (
+                          <div
+                            key={c.id}
+                            className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                          >
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                NIP: {c.nip}
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                Nama: {c.user?.name || "-"}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Hari Kerja:{" "}
+                                {Array.isArray(c.shifts)
+                                  ? c.shifts.join(", ")
+                                  : "-"}
                               </p>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="font-bold text-emerald-700">
-                              {formatCurrency(student.saldo)}
-                            </p>
-                            <Badge
-                              variant={
-                                student.status === "active"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                            >
-                              {student.status === "active"
-                                ? "Aktif"
-                                : "Nonaktif"}
-                            </Badge>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                            >
-                              Top Up
-                            </Button>
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
@@ -439,23 +705,47 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                           <div className="flex items-center space-x-4">
                             <div>
                               <p className="font-semibold text-gray-800">
-                                {transaction.student}
+                                {transaction.student?.name}
                               </p>
                               <p className="text-sm text-gray-600">
-                                {transaction.items}
+                                {/* Render item list jika array, atau tampilkan string jika sudah diolah */}
+                                {Array.isArray(transaction.items)
+                                  ? transaction.items.map(
+                                      (item: any, idx: number) => (
+                                        <span key={idx}>
+                                          {item.product?.name || item.name} x
+                                          {item.quantity}
+                                          {idx < transaction.items.length - 1
+                                            ? ", "
+                                            : ""}
+                                        </span>
+                                      )
+                                    )
+                                  : transaction.items}
                               </p>
                               <p className="text-xs text-gray-500">
-                                Kasir: {transaction.cashier}
+                                Kasir: {transaction.cashier?.user?.name || "-"}
                               </p>
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-emerald-700">
-                            {formatCurrency(transaction.amount)}
+                            {formatCurrency(
+                              Number(
+                                transaction.amount ||
+                                  transaction.totalAmount ||
+                                  0
+                              )
+                            )}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {transaction.date}
+                            {transaction.date ||
+                              (transaction.createdAt
+                                ? new Date(
+                                    transaction.createdAt
+                                  ).toLocaleString("id-ID")
+                                : "")}
                           </p>
                         </div>
                       </div>
@@ -560,59 +850,73 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
           {/* Settings */}
           <TabsContent value="settings">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-emerald-200">
-                <CardHeader>
-                  <CardTitle className="text-emerald-800">
-                    Pengaturan Sistem
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            <Card className="border-emerald-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="school-name">Nama Sekolah</Label>
-                    <Input
-                      id="school-name"
-                      defaultValue="SMA Negeri 1 Jakarta"
-                      className="border-emerald-300 focus:border-emerald-500"
-                    />
+                    <CardTitle className="text-emerald-800">
+                      Pengaturan Sistem
+                    </CardTitle>
+                    <CardDescription>
+                      Atur nama sekolah dan kantin
+                    </CardDescription>
                   </div>
-                  <div>
-                    <Label htmlFor="canteen-name">Nama Kantin</Label>
-                    <Input
-                      id="canteen-name"
-                      defaultValue="Kantin Sekolah"
-                      className="border-emerald-300 focus:border-emerald-500"
-                    />
-                  </div>
-                  <Button className="bg-emerald-700 hover:bg-emerald-800">
-                    Simpan Pengaturan
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-emerald-200">
-                <CardHeader>
-                  <CardTitle className="text-emerald-800">
-                    Backup & Restore
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button
-                    variant="outline"
-                    className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Backup Database
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                  >
-                    Restore Database
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="school-name">Nama Sekolah</Label>
+                  <Input
+                    id="school-name"
+                    value={settings.schoolName}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, schoolName: e.target.value }))
+                    }
+                    className="border-emerald-300 focus:border-emerald-500"
+                    disabled={loadingSettings || savingSettings}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="canteen-name">Nama Kantin</Label>
+                  <Input
+                    id="canteen-name"
+                    value={settings.canteenName}
+                    onChange={(e) =>
+                      setSettings((s) => ({
+                        ...s,
+                        canteenName: e.target.value,
+                      }))
+                    }
+                    className="border-emerald-300 focus:border-emerald-500"
+                    disabled={loadingSettings || savingSettings}
+                  />
+                </div>
+                <Button
+                  className="bg-emerald-700 hover:bg-emerald-800"
+                  disabled={loadingSettings || savingSettings}
+                  onClick={async () => {
+                    setSavingSettings(true);
+                    try {
+                      await fetch("/api/settings", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(settings),
+                      });
+                      toast({ title: "Pengaturan berhasil disimpan" });
+                    } catch {
+                      toast({
+                        title: "Gagal menyimpan pengaturan",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setSavingSettings(false);
+                    }
+                  }}
+                >
+                  Simpan Pengaturan
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Approval Top Up */}
@@ -739,6 +1043,591 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               {actionLoading === rejectModal.id + "reject"
                 ? "Memproses..."
                 : "Tolak Top Up"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Tambah Siswa */}
+      <Dialog
+        open={addModalType === "student"}
+        onOpenChange={(open) => setAddModalType(open ? "student" : null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Siswa Baru</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Nama</Label>
+            <Input
+              value={newStudent.name}
+              onChange={(e) =>
+                setNewStudent((s) => ({ ...s, name: e.target.value }))
+              }
+            />
+            <Label>Email</Label>
+            <Input
+              value={newStudent.email}
+              onChange={(e) =>
+                setNewStudent((s) => ({ ...s, email: e.target.value }))
+              }
+            />
+            <Label>Password</Label>
+            <Input
+              type="password"
+              value={newStudent.password}
+              onChange={(e) =>
+                setNewStudent((s) => ({ ...s, password: e.target.value }))
+              }
+            />
+            <Label>NIS</Label>
+            <Input
+              value={newStudent.nis}
+              onChange={(e) =>
+                setNewStudent((s) => ({ ...s, nis: e.target.value }))
+              }
+            />
+            <Label>Grade</Label>
+            <Select
+              value={newStudent.grade}
+              onValueChange={(val) =>
+                setNewStudent((s) => ({ ...s, grade: val }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="X">X</SelectItem>
+                <SelectItem value="XI">XI</SelectItem>
+                <SelectItem value="XII">XII</SelectItem>
+              </SelectContent>
+            </Select>
+            <Label>Jurusan</Label>
+            <Select
+              value={newStudent.class}
+              onValueChange={(val) =>
+                setNewStudent((s) => ({ ...s, class: val, classNumber: "" }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih Jurusan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="IPA">IPA</SelectItem>
+                <SelectItem value="IPS">IPS</SelectItem>
+                <SelectItem value="BAHASA">BAHASA</SelectItem>
+              </SelectContent>
+            </Select>
+            {newStudent.class && (
+              <>
+                <Label>Nomor Kelas</Label>
+                <Select
+                  value={newStudent.classNumber}
+                  onValueChange={(val) =>
+                    setNewStudent((s) => ({ ...s, classNumber: val }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Nomor Kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {newStudent.class === "BAHASA"
+                      ? [1, 2, 3, 4].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))
+                      : [1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                setAddStudentLoading(true);
+                try {
+                  const classFull =
+                    newStudent.class && newStudent.classNumber
+                      ? `${newStudent.class} ${newStudent.classNumber}`
+                      : newStudent.class;
+                  const res = await fetch("/api/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...newStudent,
+                      class: classFull,
+                      role: "STUDENT",
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok)
+                    throw new Error(data.error || "Gagal menambah siswa");
+                  toast({ title: "Siswa berhasil ditambahkan" });
+                  setAddModalType(null);
+                  setNewStudent({
+                    name: "",
+                    email: "",
+                    password: "",
+                    nis: "",
+                    grade: "",
+                    class: "",
+                    classNumber: "",
+                  });
+                  setLoadingStudents(true);
+                  const res2 = await fetch("/api/users");
+                  setStudents(await res2.json());
+                  setLoadingStudents(false);
+                } catch (e: any) {
+                  toast({
+                    title: "Error",
+                    description: e.message,
+                    variant: "destructive",
+                  });
+                } finally {
+                  setAddStudentLoading(false);
+                }
+              }}
+              disabled={addStudentLoading}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              {addStudentLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Tambah Orang Tua */}
+      <Dialog
+        open={addModalType === "parent"}
+        onOpenChange={(open) => setAddModalType(open ? "parent" : null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Orang Tua</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Nama</Label>
+            <Input
+              value={newParent.name}
+              onChange={(e) =>
+                setNewParent((p) => ({ ...p, name: e.target.value }))
+              }
+            />
+            <Label>Email</Label>
+            <Input
+              value={newParent.email}
+              onChange={(e) =>
+                setNewParent((p) => ({ ...p, email: e.target.value }))
+              }
+            />
+            <Label>Password</Label>
+            <Input
+              type="password"
+              value={newParent.password}
+              onChange={(e) =>
+                setNewParent((p) => ({ ...p, password: e.target.value }))
+              }
+            />
+            <Label>Anak (Nama/Kelas/Jurusan)</Label>
+            <Select
+              value={newParent.selectedStudentId}
+              onValueChange={(val) =>
+                setNewParent((p) => ({ ...p, selectedStudentId: val }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih Anak" />
+              </SelectTrigger>
+              <SelectContent>
+                {allStudents
+                  .filter((u) => u.role === "STUDENT" && u.student)
+                  .map((u) => (
+                    <SelectItem key={u.student.id} value={u.student.id}>
+                      {u.student.name} - {u.student.class} - {u.student.grade}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              className="mt-2"
+              onClick={() => {
+                if (
+                  newParent.selectedStudentId &&
+                  !newParent.studentIds.includes(newParent.selectedStudentId)
+                ) {
+                  setNewParent((p) => ({
+                    ...p,
+                    studentIds: [...p.studentIds, p.selectedStudentId],
+                    selectedStudentId: "",
+                  }));
+                }
+              }}
+            >
+              Tambah Anak
+            </Button>
+            {/* Daftar anak yang sudah dipilih */}
+            {newParent.studentIds.length > 0 && (
+              <div className="mt-2">
+                <Label>Anak Terpilih:</Label>
+                <ul className="list-disc ml-4">
+                  {newParent.studentIds.map((id) => {
+                    const s = allStudents.find(
+                      (u) => u.student && u.student.id === id
+                    );
+                    return (
+                      <li key={id}>
+                        {s?.student?.name} - {s?.student?.class} -{" "}
+                        {s?.student?.grade}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="ml-2"
+                          onClick={() =>
+                            setNewParent((p) => ({
+                              ...p,
+                              studentIds: p.studentIds.filter(
+                                (sid) => sid !== id
+                              ),
+                            }))
+                          }
+                        >
+                          Hapus
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                setAddParentLoading(true);
+                try {
+                  const res = await fetch("/api/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...newParent,
+                      role: "PARENT",
+                      children: newParent.studentIds.map((id) => ({
+                        studentId: id,
+                        relation: "Orang Tua",
+                      })),
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok)
+                    throw new Error(data.error || "Gagal menambah orang tua");
+                  toast({ title: "Orang tua berhasil ditambahkan" });
+                  setAddModalType(null);
+                  setNewParent({
+                    name: "",
+                    email: "",
+                    password: "",
+                    selectedStudentId: "",
+                    studentIds: [],
+                    nik: "",
+                    phone: "",
+                    address: "",
+                  });
+                  await fetchParents(); // REFRESH DATA
+                } catch (e: any) {
+                  toast({
+                    title: "Error",
+                    description: e.message,
+                    variant: "destructive",
+                  });
+                } finally {
+                  setAddParentLoading(false);
+                }
+              }}
+              disabled={addParentLoading}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              {addParentLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Tambah Kasir */}
+      <Dialog
+        open={addModalType === "cashier"}
+        onOpenChange={(open) => setAddModalType(open ? "cashier" : null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Kasir</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Nama</Label>
+            <Input
+              value={newCashier.name}
+              onChange={(e) =>
+                setNewCashier((c) => ({ ...c, name: e.target.value }))
+              }
+            />
+            <Label>Email</Label>
+            <Input
+              value={newCashier.email}
+              onChange={(e) =>
+                setNewCashier((c) => ({ ...c, email: e.target.value }))
+              }
+            />
+            <Label>Password</Label>
+            <Input
+              type="password"
+              value={newCashier.password}
+              onChange={(e) =>
+                setNewCashier((c) => ({ ...c, password: e.target.value }))
+              }
+            />
+            <Label>NIP</Label>
+            <Input
+              value={newCashier.nip}
+              onChange={(e) =>
+                setNewCashier((c) => ({ ...c, nip: e.target.value }))
+              }
+            />
+            <Label>Hari Kerja (bisa pilih lebih dari satu)</Label>
+            <div className="flex flex-wrap gap-2">
+              {["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"].map(
+                (day) => (
+                  <label key={day} className="flex items-center space-x-1">
+                    <input
+                      type="checkbox"
+                      checked={newCashier.shifts.includes(day)}
+                      onChange={(e) => {
+                        setNewCashier((c) => {
+                          if (e.target.checked) {
+                            return { ...c, shifts: [...c.shifts, day] };
+                          } else {
+                            return {
+                              ...c,
+                              shifts: c.shifts.filter((d) => d !== day),
+                            };
+                          }
+                        });
+                      }}
+                    />
+                    <span>{day}</span>
+                  </label>
+                )
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                setAddCashierLoading(true);
+                try {
+                  const res = await fetch("/api/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...newCashier,
+                      role: "CASHIER",
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok)
+                    throw new Error(data.error || "Gagal menambah kasir");
+                  toast({ title: "Kasir berhasil ditambahkan" });
+                  setAddModalType(null);
+                  setNewCashier({
+                    name: "",
+                    email: "",
+                    password: "",
+                    nip: "",
+                    shifts: [],
+                  });
+                } catch (e: any) {
+                  toast({
+                    title: "Error",
+                    description: e.message,
+                    variant: "destructive",
+                  });
+                } finally {
+                  setAddCashierLoading(false);
+                }
+              }}
+              disabled={addCashierLoading}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              {addCashierLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Edit Orang Tua */}
+      <Dialog open={modalEditParent} onOpenChange={setModalEditParent}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Orang Tua</DialogTitle>
+          </DialogHeader>
+          {editParent && (
+            <div className="space-y-3">
+              <Label>Nama</Label>
+              <Input
+                value={editParent.name}
+                onChange={(e) =>
+                  setEditParent((prev: any) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
+              />
+              <Label>Email</Label>
+              <Input
+                value={editParent.email}
+                onChange={(e) =>
+                  setEditParent((prev: any) => ({
+                    ...prev,
+                    email: e.target.value,
+                  }))
+                }
+              />
+              <Label>Password</Label>
+              <Input
+                type="password"
+                value={editParent.password}
+                onChange={(e) =>
+                  setEditParent((prev: any) => ({
+                    ...prev,
+                    password: e.target.value,
+                  }))
+                }
+              />
+              <Label>Anak (Nama/Kelas/Jurusan)</Label>
+              <Select
+                value={editParent.selectedStudentIdEdit || ""}
+                onValueChange={(val) =>
+                  setEditParent((prev: any) => ({
+                    ...prev,
+                    selectedStudentIdEdit: val,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Anak" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allStudents
+                    .filter((u) => u.role === "STUDENT" && u.student)
+                    .map((u) => (
+                      <SelectItem key={u.student.id} value={u.student.id}>
+                        {u.student.name} - {u.student.class} - {u.student.grade}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                className="mt-2"
+                onClick={() => {
+                  if (
+                    editParent.selectedStudentIdEdit &&
+                    !editParent.parent.parentStudents.some(
+                      (ps: any) =>
+                        ps.studentId === editParent.selectedStudentIdEdit
+                    )
+                  ) {
+                    setEditParent((prev: any) => ({
+                      ...prev,
+                      parent: {
+                        ...prev.parent,
+                        parentStudents: [
+                          ...prev.parent.parentStudents,
+                          {
+                            studentId: editParent.selectedStudentIdEdit,
+                            student: allStudents.find(
+                              (u) =>
+                                u.student &&
+                                u.student.id ===
+                                  editParent.selectedStudentIdEdit
+                            )?.student,
+                          },
+                        ],
+                      },
+                      selectedStudentIdEdit: "",
+                    }));
+                  }
+                }}
+              >
+                Tambah Anak
+              </Button>
+              {/* Daftar anak yang sudah dipilih */}
+              {editParent.parent?.parentStudents?.length > 0 && (
+                <div className="mt-2">
+                  <Label>Anak Terpilih:</Label>
+                  <ul className="list-disc ml-4">
+                    {editParent.parent.parentStudents.map((ps: any) => (
+                      <li key={ps.studentId}>
+                        {ps.student?.name} - {ps.student?.class} -{" "}
+                        {ps.student?.grade}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="ml-2"
+                          onClick={() =>
+                            setEditParent((prev: any) => ({
+                              ...prev,
+                              parent: {
+                                ...prev.parent,
+                                parentStudents:
+                                  prev.parent.parentStudents.filter(
+                                    (x: any) => x.studentId !== ps.studentId
+                                  ),
+                              },
+                            }))
+                          }
+                        >
+                          Hapus
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                // Kirim update ke backend (implementasi endpoint update parent & relasi anak)
+                await fetch("/api/users", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id: editParent.id,
+                    name: editParent.name,
+                    email: editParent.email,
+                    password: editParent.password,
+                    role: "PARENT",
+                    children: editParent.parent.parentStudents.map(
+                      (ps: any) => ({
+                        studentId: ps.studentId,
+                        relation: "Orang Tua",
+                      })
+                    ),
+                  }),
+                });
+                setModalEditParent(false);
+                await fetchParents(); // REFRESH DATA
+              }}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              Simpan Perubahan
             </Button>
           </DialogFooter>
         </DialogContent>

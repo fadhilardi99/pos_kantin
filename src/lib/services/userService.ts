@@ -18,7 +18,8 @@ export interface CreateStudentData extends CreateUserData {
 
 export interface CreateCashierData extends CreateUserData {
   nip: string;
-  shift: string;
+  shift?: string;
+  shifts?: string[];
 }
 
 export interface CreateAdminData extends CreateUserData {
@@ -30,6 +31,7 @@ export interface CreateParentData extends CreateUserData {
   nik: string;
   phone: string;
   address?: string;
+  children?: { studentId: string; relation: string }[];
 }
 
 export class UserService {
@@ -76,7 +78,6 @@ export class UserService {
   // Create cashier
   static async createCashier(data: CreateCashierData) {
     const hashedPassword = await bcrypt.hash(data.password, 12);
-
     return await prisma.cashier.create({
       data: {
         user: {
@@ -88,7 +89,8 @@ export class UserService {
           },
         },
         nip: data.nip,
-        shift: data.shift,
+        shift: data.shift || "",
+        shifts: data.shifts || [],
       },
       include: {
         user: true,
@@ -123,24 +125,38 @@ export class UserService {
   static async createParent(data: CreateParentData) {
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
-    return await prisma.parent.create({
-      data: {
-        user: {
-          create: {
-            email: data.email,
-            password: hashedPassword,
-            name: data.name,
-            role: UserRole.PARENT,
+    return await prisma.$transaction(async (tx) => {
+      const parent = await tx.parent.create({
+        data: {
+          user: {
+            create: {
+              email: data.email,
+              password: hashedPassword,
+              name: data.name,
+              role: UserRole.PARENT,
+            },
           },
+          nik: data.nik,
+          name: data.name,
+          phone: data.phone,
+          address: data.address,
         },
-        nik: data.nik,
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-      },
-      include: {
-        user: true,
-      },
+        include: { user: true },
+      });
+
+      // Hubungkan ke anak-anak jika ada
+      if (data.children && data.children.length > 0) {
+        for (const child of data.children) {
+          await tx.parentStudent.create({
+            data: {
+              parentId: parent.id,
+              studentId: child.studentId,
+              relation: child.relation,
+            },
+          });
+        }
+      }
+      return parent;
     });
   }
 
@@ -264,6 +280,48 @@ export class UserService {
     });
   }
 
+  // Update parent dan relasi anak-anaknya
+  static async updateParentWithChildren(
+    userId: string,
+    data: any,
+    children: { studentId: string; relation: string }[]
+  ) {
+    return await prisma.$transaction(async (tx) => {
+      // Update data user/parent
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          name: data.name,
+          email: data.email,
+          password: data.password
+            ? await bcrypt.hash(data.password, 12)
+            : undefined,
+        },
+      });
+      const parent = await tx.parent.update({
+        where: { userId },
+        data: {
+          // update field parent jika ada
+          phone: data.phone,
+          address: data.address,
+        },
+      });
+      // Hapus semua relasi parentStudents lama
+      await tx.parentStudent.deleteMany({ where: { parentId: parent.id } });
+      // Tambahkan relasi parentStudents baru
+      for (const child of children) {
+        await tx.parentStudent.create({
+          data: {
+            parentId: parent.id,
+            studentId: child.studentId,
+            relation: child.relation,
+          },
+        });
+      }
+      return parent;
+    });
+  }
+
   // Delete user
   static async deleteUser(id: string) {
     return await prisma.user.delete({
@@ -281,6 +339,25 @@ export class UserService {
 
   // Get users by role
   static async getUsersByRole(role: UserRole) {
+    if (role === UserRole.PARENT) {
+      return await prisma.user.findMany({
+        where: { role },
+        include: {
+          parent: {
+            include: {
+              parentStudents: {
+                include: {
+                  student: {
+                    include: { user: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { name: "asc" },
+      });
+    }
     return await prisma.user.findMany({
       where: { role },
       include: {

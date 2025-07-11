@@ -4,8 +4,14 @@ import { UserRole } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export async function GET() {
-  const users = await UserService.getUsersByRole(UserRole.STUDENT); // Default: list students
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const role = searchParams.get("role") as UserRole | null;
+  if (role === UserRole.CASHIER) {
+    const cashiers = await UserService.getAllCashiers();
+    return NextResponse.json(cashiers);
+  }
+  const users = await UserService.getUsersByRole(role || UserRole.STUDENT);
   return NextResponse.json(users);
 }
 
@@ -31,7 +37,10 @@ export async function POST(req: NextRequest) {
         user = await UserService.createAdmin(body);
         break;
       case UserRole.PARENT:
-        user = await UserService.createParent(body);
+        user = await UserService.createParent({
+          ...body,
+          children: body.children || [],
+        });
         break;
       default:
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
@@ -55,6 +64,15 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
   }
   try {
+    // Jika update parent dan ada children, update relasi parentStudents
+    if (body.role === "PARENT" && Array.isArray(body.children)) {
+      const updated = await UserService.updateParentWithChildren(
+        body.id,
+        body,
+        body.children
+      );
+      return NextResponse.json(updated);
+    }
     const user = await UserService.updateUser(body.id, body);
     return NextResponse.json(user);
   } catch (e: any) {

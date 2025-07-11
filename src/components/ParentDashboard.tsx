@@ -40,24 +40,8 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
 
   const [selectedStudent, setSelectedStudent] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
-
-  // Demo data untuk anak-anak yang terdaftar
-  const [children] = useState([
-    {
-      id: 1,
-      name: "Ahmad Rizki",
-      nis: "2024001",
-      class: "XII IPA 1",
-      saldo: 50000,
-    },
-    {
-      id: 2,
-      name: "Siti Rizka",
-      nis: "2024002",
-      class: "X IPS 2",
-      saldo: 35000,
-    },
-  ]);
+  const [selectedMethod, setSelectedMethod] = useState("TRANSFER");
+  const [children, setChildren] = useState<any[]>([]);
 
   // Top up & transaction history from API
   const [topUpHistory, setTopUpHistory] = useState<any[]>([]);
@@ -66,6 +50,20 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
   const [loadingTx, setLoadingTx] = useState(true);
   const [errorTx, setErrorTx] = useState<string | null>(null);
+
+  // Fetch children (students) from backend
+  useEffect(() => {
+    async function fetchChildren() {
+      try {
+        const res = await fetch("/api/users/children");
+        const data = await res.json();
+        setChildren(data);
+      } catch (e) {
+        // Optional: handle error
+      }
+    }
+    fetchChildren();
+  }, []);
 
   useEffect(() => {
     async function fetchTopUps() {
@@ -121,7 +119,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
     }).format(amount);
   };
 
-  const handleTopUp = () => {
+  const handleTopUp = async () => {
     if (!selectedStudent || !topUpAmount) {
       toast({
         title: "Error",
@@ -141,16 +139,57 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
       return;
     }
 
-    // Simulate top up process
-    toast({
-      title: "Top Up Berhasil",
-      description: `Berhasil top up ${formatCurrency(
-        amount
-      )} ke akun ${selectedStudent}`,
-    });
+    // Ambil id anak dari children
+    const student = children.find((c) => c.name === selectedStudent);
+    if (!student) {
+      toast({
+        title: "Error",
+        description: "Data siswa tidak ditemukan",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setSelectedStudent("");
-    setTopUpAmount("");
+    try {
+      const res = await fetch("/api/topups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: student.id.toString(),
+          amount: amount,
+          method: selectedMethod,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal melakukan top up");
+      }
+      toast({
+        title: "Top Up Berhasil",
+        description: `Berhasil top up ${formatCurrency(amount)} ke akun ${
+          student.name
+        }`,
+      });
+      setSelectedStudent("");
+      setTopUpAmount("");
+      // Refresh data top up
+      setLoadingTopUp(true);
+      const res2 = await fetch("/api/topups");
+      const data2 = await res2.json();
+      const filtered = data2.filter((t: any) =>
+        children.some(
+          (c) => t.student?.nis === c.nis || t.student?.name === c.name
+        )
+      );
+      setTopUpHistory(filtered);
+      setLoadingTopUp(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const quickTopUpAmounts = [10000, 25000, 50000, 100000];
@@ -210,6 +249,9 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                       </p>
                       <p className="text-sm text-emerald-600">
                         Kelas: {child.class}
+                      </p>
+                      <p className="text-xs text-emerald-500 italic">
+                        Sebagai: {child.relation}
                       </p>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-sm text-gray-600">Saldo:</span>
@@ -317,14 +359,18 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
 
                 <div>
                   <Label>Metode Pembayaran</Label>
-                  <Select defaultValue="transfer">
+                  <Select
+                    value={selectedMethod}
+                    onValueChange={setSelectedMethod}
+                  >
                     <SelectTrigger className="border-emerald-300 focus:border-emerald-500">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="transfer">Transfer Bank</SelectItem>
-                      <SelectItem value="cash">Tunai ke Sekolah</SelectItem>
-                      <SelectItem value="ewallet">E-Wallet</SelectItem>
+                      <SelectItem value="TRANSFER">Transfer Bank</SelectItem>
+                      <SelectItem value="CASH">Tunai ke Sekolah</SelectItem>
+                      <SelectItem value="E_WALLET">E-Wallet</SelectItem>
+                      <SelectItem value="QR_CODE">QR Code</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
