@@ -6,6 +6,15 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId");
+  if (userId) {
+    // Cari kasir berdasarkan userId
+    const cashier = await UserService.getCashierByUserId(userId);
+    if (!cashier) {
+      return NextResponse.json({ error: "Cashier not found" }, { status: 404 });
+    }
+    return NextResponse.json(cashier);
+  }
   const role = searchParams.get("role") as UserRole | null;
   if (role === UserRole.CASHIER) {
     const cashiers = await UserService.getAllCashiers();

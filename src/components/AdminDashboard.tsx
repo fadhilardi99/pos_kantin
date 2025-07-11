@@ -36,9 +36,11 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface AdminDashboardProps {
-  user: { name: string };
+  user: { name: string; role: string };
   onLogout: () => void;
 }
 
@@ -68,7 +70,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   }>({ open: false, id: null });
   const [rejectReason, setRejectReason] = useState("");
   const [addModalType, setAddModalType] = useState<
-    null | "student" | "parent" | "cashier"
+    null | "student" | "parent" | "cashier" | "admin"
   >(null);
   const [newStudent, setNewStudent] = useState({
     name: "",
@@ -144,6 +146,32 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     null
   );
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
+  const [addAdminModal, setAddAdminModal] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({
+    name: "",
+    email: "",
+    password: "",
+    nip: "",
+    position: "",
+  });
+  const [addAdminLoading, setAddAdminLoading] = useState(false);
+  const [topUpModal, setTopUpModal] = useState(false);
+  const [topUpStudent, setTopUpStudent] = useState<any | null>(null);
+  const [topUpAmount, setTopUpAmount] = useState(0);
+  const [topUpLoading, setTopUpLoading] = useState(false);
+  const [addProductModal, setAddProductModal] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    price: "",
+    stock: "",
+    category: "MAKANAN_BERAT",
+    description: "",
+    image: "",
+    barcode: "",
+  });
+  const [addProductLoading, setAddProductLoading] = useState(false);
 
   // Fetch settings saat buka tab
   useEffect(() => {
@@ -282,6 +310,20 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     fetchCashiers();
   }, []);
 
+  // Fetch admins
+  useEffect(() => {
+    async function fetchAdmins() {
+      setLoadingAdmins(true);
+      try {
+        const res = await fetch("/api/users?role=ADMIN");
+        const data = await res.json();
+        setAdmins(data);
+      } catch {}
+      setLoadingAdmins(false);
+    }
+    fetchAdmins();
+  }, []);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -333,6 +375,52 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
       setRejectReason("");
     }
   }
+
+  // Fungsi untuk download laporan PDF
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Laporan Penjualan Harian", 14, 16);
+    doc.setFontSize(11);
+    doc.text(`Tanggal: ${new Date().toLocaleDateString("id-ID")}`, 14, 24);
+    doc.text(`Total Transaksi: ${transactions.length}`, 14, 32);
+    doc.text(`Total Penjualan: ${formatCurrency(getTotalSales())}`, 14, 40);
+    doc.text(
+      `Rata-rata per Transaksi: ${formatCurrency(
+        transactions.length ? getTotalSales() / transactions.length : 0
+      )}`,
+      14,
+      48
+    );
+    // Table transaksi
+    autoTable(doc, {
+      startY: 56,
+      head: [["No", "Nama Siswa", "Kasir", "Tanggal", "Jumlah", "Item"]],
+      body: transactions.map((t: any, idx: number) => [
+        idx + 1,
+        t.student?.name || "-",
+        t.cashier?.user?.name || "-",
+        t.date ||
+          (t.createdAt ? new Date(t.createdAt).toLocaleString("id-ID") : ""),
+        formatCurrency(Number(t.amount || t.totalAmount || 0)),
+        Array.isArray(t.items)
+          ? t.items
+              .map(
+                (item: any) =>
+                  `${item.product?.name || item.name} x${item.quantity}`
+              )
+              .join(", ")
+          : t.items,
+      ]),
+      styles: { font: "helvetica", fontSize: 9 },
+      headStyles: { fillColor: [22, 101, 52] }, // emerald-700
+    });
+    doc.save(
+      `laporan-penjualan-harian-${new Date()
+        .toLocaleDateString("id-ID")
+        .replace(/\//g, "-")}.pdf`
+    );
+  };
 
   // Hapus handler backup dan restore
 
@@ -443,12 +531,18 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
         {/* Main Content */}
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-emerald-50 border-emerald-200">
+          <TabsList className="grid w-full grid-cols-6 bg-emerald-50 border-emerald-200">
             <TabsTrigger
               value="students"
               className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
             >
               Manajemen Data
+            </TabsTrigger>
+            <TabsTrigger
+              value="produk"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Produk
             </TabsTrigger>
             <TabsTrigger
               value="transactions"
@@ -468,6 +562,12 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
             >
               Pengaturan
             </TabsTrigger>
+            <TabsTrigger
+              value="approval"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Approval Top Up
+            </TabsTrigger>
           </TabsList>
 
           {/* Students Management */}
@@ -485,7 +585,9 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                   </div>
                   <Select
                     onValueChange={(val) =>
-                      setAddModalType(val as "student" | "parent" | "cashier")
+                      setAddModalType(
+                        val as "student" | "parent" | "cashier" | "admin"
+                      )
                     }
                     value={addModalType || ""}
                   >
@@ -497,6 +599,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                       <SelectItem value="student">Tambah Siswa</SelectItem>
                       <SelectItem value="parent">Tambah Orang Tua</SelectItem>
                       <SelectItem value="cashier">Tambah Kasir</SelectItem>
+                      <SelectItem value="admin">Tambah Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -507,6 +610,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                     <TabsTrigger value="tab-siswa">Siswa</TabsTrigger>
                     <TabsTrigger value="tab-parent">Orang Tua</TabsTrigger>
                     <TabsTrigger value="tab-cashier">Kasir</TabsTrigger>
+                    <TabsTrigger value="tab-admin">Admin</TabsTrigger>
                   </TabsList>
                   <TabsContent value="tab-siswa">
                     {loadingStudents ? (
@@ -570,6 +674,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                                       size="sm"
                                       variant="outline"
                                       className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                                      onClick={() => {
+                                        setTopUpStudent(s);
+                                        setTopUpAmount(0);
+                                        setTopUpModal(true);
+                                      }}
                                     >
                                       Top Up
                                     </Button>
@@ -679,7 +788,108 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                       </div>
                     )}
                   </TabsContent>
+                  <TabsContent value="tab-admin">
+                    {loadingAdmins ? (
+                      <p>Loading admin...</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {admins.map((a) => (
+                          <div
+                            key={a.admin?.id}
+                            className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                          >
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {a.name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Email: {a.email}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                NIP: {a.admin?.nip}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Jabatan: {a.admin?.position}
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={a.admin?.nip === "00000001"}
+                                onClick={async () => {
+                                  if (a.admin?.nip === "00000001") return;
+                                  if (!window.confirm("Yakin hapus admin ini?"))
+                                    return;
+                                  await fetch(`/api/users`, {
+                                    method: "DELETE",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({ id: a.id }),
+                                  });
+                                  setAdmins((prev) =>
+                                    prev.filter((x) => x.id !== a.id)
+                                  );
+                                }}
+                              >
+                                Hapus
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
                 </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Products Management */}
+          <TabsContent value="produk">
+            <Card className="border-emerald-200 mt-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-emerald-800">
+                    Daftar Produk
+                  </CardTitle>
+                  {user.role === "ADMIN" && (
+                    <Button
+                      onClick={() => setAddProductModal(true)}
+                      className="bg-emerald-700 text-white ml-2"
+                    >
+                      Tambah Produk
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingProducts ? (
+                  <p>Loading produk...</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {products.map((p) => (
+                      <div
+                        key={p.id}
+                        className="p-4 border rounded-lg bg-emerald-50"
+                      >
+                        <div className="font-bold text-emerald-800">
+                          {p.name}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Harga: {p.price}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Stok: {p.stock}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Kategori: {p.category}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -831,6 +1041,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                   <Button
                     className="w-full mt-4 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                     variant="outline"
+                    onClick={handleDownloadPDF}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download Laporan PDF
@@ -874,77 +1085,6 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          {/* Settings */}
-          <TabsContent value="settings">
-            <Card className="border-emerald-200">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-emerald-800">
-                      Pengaturan Sistem
-                    </CardTitle>
-                    <CardDescription>
-                      Atur nama sekolah dan kantin
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="school-name">Nama Sekolah</Label>
-                  <Input
-                    id="school-name"
-                    value={settings.schoolName}
-                    onChange={(e) =>
-                      setSettings((s) => ({ ...s, schoolName: e.target.value }))
-                    }
-                    className="border-emerald-300 focus:border-emerald-500"
-                    disabled={loadingSettings || savingSettings}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="canteen-name">Nama Kantin</Label>
-                  <Input
-                    id="canteen-name"
-                    value={settings.canteenName}
-                    onChange={(e) =>
-                      setSettings((s) => ({
-                        ...s,
-                        canteenName: e.target.value,
-                      }))
-                    }
-                    className="border-emerald-300 focus:border-emerald-500"
-                    disabled={loadingSettings || savingSettings}
-                  />
-                </div>
-                <Button
-                  className="bg-emerald-700 hover:bg-emerald-800"
-                  disabled={loadingSettings || savingSettings}
-                  onClick={async () => {
-                    setSavingSettings(true);
-                    try {
-                      await fetch("/api/settings", {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(settings),
-                      });
-                      toast({ title: "Pengaturan berhasil disimpan" });
-                    } catch {
-                      toast({
-                        title: "Gagal menyimpan pengaturan",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setSavingSettings(false);
-                    }
-                  }}
-                >
-                  Simpan Pengaturan
-                </Button>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Approval Top Up */}
@@ -1027,6 +1167,77 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Settings */}
+          <TabsContent value="settings">
+            <Card className="border-emerald-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-emerald-800">
+                      Pengaturan Sistem
+                    </CardTitle>
+                    <CardDescription>
+                      Atur nama sekolah dan kantin
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="school-name">Nama Sekolah</Label>
+                  <Input
+                    id="school-name"
+                    value={settings.schoolName}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, schoolName: e.target.value }))
+                    }
+                    className="border-emerald-300 focus:border-emerald-500"
+                    disabled={loadingSettings || savingSettings}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="canteen-name">Nama Kantin</Label>
+                  <Input
+                    id="canteen-name"
+                    value={settings.canteenName}
+                    onChange={(e) =>
+                      setSettings((s) => ({
+                        ...s,
+                        canteenName: e.target.value,
+                      }))
+                    }
+                    className="border-emerald-300 focus:border-emerald-500"
+                    disabled={loadingSettings || savingSettings}
+                  />
+                </div>
+                <Button
+                  className="bg-emerald-700 hover:bg-emerald-800"
+                  disabled={loadingSettings || savingSettings}
+                  onClick={async () => {
+                    setSavingSettings(true);
+                    try {
+                      await fetch("/api/settings", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(settings),
+                      });
+                      toast({ title: "Pengaturan berhasil disimpan" });
+                    } catch {
+                      toast({
+                        title: "Gagal menyimpan pengaturan",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setSavingSettings(false);
+                    }
+                  }}
+                >
+                  Simpan Pengaturan
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1778,6 +1989,270 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Modal Tambah Admin */}
+      <Dialog
+        open={addModalType === "admin" || addAdminModal}
+        onOpenChange={(open) => {
+          setAddAdminModal(open);
+          if (!open) setAddModalType(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Admin Baru</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Nama</Label>
+            <Input
+              value={newAdmin.name}
+              onChange={(e) =>
+                setNewAdmin((a) => ({ ...a, name: e.target.value }))
+              }
+            />
+            <Label>Email</Label>
+            <Input
+              value={newAdmin.email}
+              onChange={(e) =>
+                setNewAdmin((a) => ({ ...a, email: e.target.value }))
+              }
+            />
+            <Label>Password</Label>
+            <Input
+              type="password"
+              value={newAdmin.password}
+              onChange={(e) =>
+                setNewAdmin((a) => ({ ...a, password: e.target.value }))
+              }
+            />
+            <Label>NIP</Label>
+            <Input
+              value={newAdmin.nip}
+              onChange={(e) =>
+                setNewAdmin((a) => ({ ...a, nip: e.target.value }))
+              }
+            />
+            <Label>Jabatan</Label>
+            <Input
+              value={newAdmin.position}
+              onChange={(e) =>
+                setNewAdmin((a) => ({ ...a, position: e.target.value }))
+              }
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                setAddAdminLoading(true);
+                try {
+                  const res = await fetch("/api/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: newAdmin.name,
+                      email: newAdmin.email,
+                      password: newAdmin.password,
+                      role: "ADMIN",
+                      nip: newAdmin.nip,
+                      position: newAdmin.position,
+                    }),
+                  });
+                  if (!res.ok) throw new Error("Gagal menambah admin");
+                  setAddAdminModal(false);
+                  setAddModalType(null);
+                  setNewAdmin({
+                    name: "",
+                    email: "",
+                    password: "",
+                    nip: "",
+                    position: "",
+                  });
+                  setLoadingAdmins(true);
+                  const res2 = await fetch("/api/users?role=ADMIN");
+                  setAdmins(await res2.json());
+                  setLoadingAdmins(false);
+                } catch (e) {
+                  alert("Gagal menambah admin");
+                } finally {
+                  setAddAdminLoading(false);
+                }
+              }}
+              disabled={addAdminLoading}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              {addAdminLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Top Up Siswa Manual */}
+      <Dialog open={topUpModal} onOpenChange={setTopUpModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Top Up Saldo Siswa</DialogTitle>
+          </DialogHeader>
+          {topUpStudent && (
+            <div className="space-y-3">
+              <div>
+                Nama: <b>{topUpStudent.name}</b>
+              </div>
+              <div>Kelas: {topUpStudent.class}</div>
+              <div>
+                Saldo Saat Ini: <b>{formatCurrency(topUpStudent.saldo)}</b>
+              </div>
+              <Label>Nominal Top Up</Label>
+              <Input
+                type="number"
+                min={1}
+                value={topUpAmount}
+                onChange={(e) => setTopUpAmount(Number(e.target.value))}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                if (!topUpStudent || !topUpAmount || topUpAmount <= 0) return;
+                setTopUpLoading(true);
+                try {
+                  const res = await fetch(`/api/users/student`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      id: topUpStudent.id,
+                      amount: topUpAmount,
+                    }),
+                  });
+                  if (!res.ok) throw new Error("Gagal top up saldo siswa");
+                  setTopUpModal(false);
+                  setTopUpStudent(null);
+                  setTopUpAmount(0);
+                  setLoadingStudents(true);
+                  const res2 = await fetch("/api/users");
+                  setStudents(await res2.json());
+                  setLoadingStudents(false);
+                } catch (e) {
+                  alert("Gagal top up saldo siswa");
+                } finally {
+                  setTopUpLoading(false);
+                }
+              }}
+              disabled={topUpLoading || !topUpAmount || topUpAmount <= 0}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              {topUpLoading ? "Memproses..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Tambah Produk */}
+      <Dialog open={addProductModal} onOpenChange={setAddProductModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Produk Baru</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Nama Produk</Label>
+            <Input
+              value={newProduct.name}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, name: e.target.value }))
+              }
+            />
+            <Label>Harga</Label>
+            <Input
+              type="number"
+              value={newProduct.price}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, price: e.target.value }))
+              }
+            />
+            <Label>Stok</Label>
+            <Input
+              type="number"
+              value={newProduct.stock}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, stock: e.target.value }))
+              }
+            />
+            <Label>Kategori</Label>
+            <select
+              className="w-full border rounded p-2"
+              value={newProduct.category}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, category: e.target.value }))
+              }
+            >
+              <option value="MAKANAN_BERAT">Makanan Berat</option>
+              <option value="MAKANAN_RINGAN">Makanan Ringan</option>
+              <option value="MINUMAN">Minuman</option>
+              <option value="SNACK">Snack</option>
+              <option value="LAINNYA">Lainnya</option>
+            </select>
+            <Label>Deskripsi</Label>
+            <Input
+              value={newProduct.description}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, description: e.target.value }))
+              }
+            />
+            <Label>Barcode (opsional)</Label>
+            <Input
+              value={newProduct.barcode}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, barcode: e.target.value }))
+              }
+            />
+            <Label>URL Gambar (opsional)</Label>
+            <Input
+              value={newProduct.image}
+              onChange={(e) =>
+                setNewProduct((p) => ({ ...p, image: e.target.value }))
+              }
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                setAddProductLoading(true);
+                try {
+                  const res = await fetch("/api/products", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      ...newProduct,
+                      price: Number(newProduct.price),
+                      stock: Number(newProduct.stock),
+                    }),
+                  });
+                  if (!res.ok) throw new Error("Gagal menambah produk");
+                  setAddProductModal(false);
+                  setNewProduct({
+                    name: "",
+                    price: "",
+                    stock: "",
+                    category: "MAKANAN_BERAT",
+                    description: "",
+                    image: "",
+                    barcode: "",
+                  });
+                  setLoadingProducts(true);
+                  const res2 = await fetch("/api/products");
+                  setProducts(await res2.json());
+                  setLoadingProducts(false);
+                } catch (e) {
+                  alert("Gagal menambah produk");
+                } finally {
+                  setAddProductLoading(false);
+                }
+              }}
+              disabled={addProductLoading}
+              className="w-full bg-emerald-700 hover:bg-emerald-800"
+            >
+              {addProductLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

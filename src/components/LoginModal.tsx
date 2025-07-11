@@ -54,7 +54,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
         // reload atau fetch session baru
         window.location.reload();
       } else {
-        setLoginError("Login gagal. Cek data Anda.");
+        setLoginError("Login gagal. Email, password, atau role tidak sesuai.");
       }
     }
   };
@@ -95,10 +95,10 @@ const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
                   <SelectValue placeholder="Pilih role Anda" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="student">👨‍🎓 Siswa</SelectItem>
-                  <SelectItem value="cashier">🛒 Kasir</SelectItem>
-                  <SelectItem value="admin">👨‍💼 Admin</SelectItem>
-                  <SelectItem value="parent">👨‍👩‍👧‍👦 Orang Tua</SelectItem>
+                  <SelectItem value="STUDENT">👨‍🎓 Siswa</SelectItem>
+                  <SelectItem value="CASHIER">🛒 Kasir</SelectItem>
+                  <SelectItem value="ADMIN">👨‍💼 Admin</SelectItem>
+                  <SelectItem value="PARENT">👨‍👩‍👧‍👦 Orang Tua</SelectItem>
                 </SelectContent>
               </Select>
             </div>

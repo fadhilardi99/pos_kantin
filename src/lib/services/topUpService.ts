@@ -156,7 +156,7 @@ export class TopUpService {
   }
 
   // Approve top-up
-  static async approveTopUp(id: string, adminId: string) {
+  static async approveTopUp(id: string, adminUserId: string) {
     const topUp = await this.getTopUpById(id);
 
     if (!topUp) {
@@ -166,6 +166,13 @@ export class TopUpService {
     if (topUp.status !== TopUpStatus.PENDING) {
       throw new Error("Top-up is not pending");
     }
+
+    // Cari adminId dari tabel admins berdasarkan userId
+    const admin = await prisma.admin.findUnique({
+      where: { userId: adminUserId },
+    });
+    if (!admin) throw new Error("Admin not found");
+    const adminId = admin.id;
 
     const updatedTopUp = await prisma.$transaction(async (tx) => {
       // Update top-up status
@@ -202,7 +209,7 @@ export class TopUpService {
   }
 
   // Reject top-up
-  static async rejectTopUp(id: string, adminId: string, reason?: string) {
+  static async rejectTopUp(id: string, adminUserId: string, reason?: string) {
     const topUp = await this.getTopUpById(id);
 
     if (!topUp) {
@@ -212,6 +219,13 @@ export class TopUpService {
     if (topUp.status !== TopUpStatus.PENDING) {
       throw new Error("Top-up is not pending");
     }
+
+    // Cari adminId dari tabel admins berdasarkan userId
+    const admin = await prisma.admin.findUnique({
+      where: { userId: adminUserId },
+    });
+    if (!admin) throw new Error("Admin not found");
+    const adminId = admin.id;
 
     const updatedTopUp = await prisma.topUp.update({
       where: { id },

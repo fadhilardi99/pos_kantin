@@ -14,15 +14,18 @@ export const authOptions = {
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" }, // tambahkan role
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password || !credentials?.role)
+          return null;
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
         if (
           user &&
-          (await bcrypt.compare(credentials.password, user.password))
+          (await bcrypt.compare(credentials.password, user.password)) &&
+          user.role === credentials.role // Validasi role
         ) {
           return {
             id: user.id,

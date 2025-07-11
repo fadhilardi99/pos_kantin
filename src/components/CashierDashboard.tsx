@@ -23,6 +23,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 
 type Student = {
+  id: string;
   name: string;
   nis: string;
   saldo: number;
@@ -36,10 +37,13 @@ type Product = {
   stock: number;
   category: string;
   quantity?: number;
+  image?: string; // Added image property
 };
 
+type Cashier = { id: string; user: { name: string } };
+
 interface CashierDashboardProps {
-  user: { name: string }; // or your actual user type
+  user: { name: string; id: string };
   onLogout: () => void;
 }
 
@@ -50,6 +54,20 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errorProducts, setErrorProducts] = useState<string | null>(null);
+  const [studentTransactions, setStudentTransactions] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [cashier, setCashier] = useState<Cashier | null>(null);
+
+  useEffect(() => {
+    async function fetchCashier() {
+      const res = await fetch(`/api/users?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCashier(data);
+      }
+    }
+    if (user?.id) fetchCashier();
+  }, [user?.id]);
 
   useEffect(() => {
     async function fetchProducts() {
@@ -76,40 +94,47 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
     }).format(amount);
   };
 
-  const handleScanStudent = () => {
-    // Demo scan - dalam implementasi nyata akan menggunakan QR scanner
-    const demoStudent = {
-      name: "Ahmad Rizki",
-      nis: "2024001",
-      saldo: 50000,
-      class: "XII IPA 1",
-    };
-    setCurrentStudent(demoStudent);
-    toast({
-      title: "Siswa Ditemukan",
-      description: `${demoStudent.name} - Saldo: ${formatCurrency(
-        demoStudent.saldo
-      )}`,
-    });
-  };
-
-  const handleSearchByNIS = () => {
-    if (nisInput.trim()) {
-      const demoStudent = {
-        name: "Ahmad Rizki",
-        nis: nisInput,
-        saldo: 50000,
-        class: "XII IPA 1",
-      };
-      setCurrentStudent(demoStudent);
-      setNisInput("");
+  const fetchStudentByNIS = async (nis: string) => {
+    try {
+      const res = await fetch(`/api/users/student?nis=${nis}`);
+      if (!res.ok) throw new Error("Siswa tidak ditemukan");
+      const data = await res.json();
+      setCurrentStudent({
+        id: data.id,
+        name: data.name,
+        nis: data.nis,
+        saldo: Number(data.saldo),
+        class: data.class || "-",
+      });
+      fetchStudentTransactions(data.id);
       toast({
         title: "Siswa Ditemukan",
-        description: `${demoStudent.name} - Saldo: ${formatCurrency(
-          demoStudent.saldo
+        description: `${data.name} - Saldo: ${formatCurrency(
+          Number(data.saldo)
         )}`,
       });
+    } catch {
+      setCurrentStudent(null);
+      setStudentTransactions([]);
+      toast({ title: "Siswa tidak ditemukan", variant: "destructive" });
     }
+  };
+  const fetchStudentTransactions = async (studentId: string) => {
+    try {
+      const res = await fetch(`/api/transactions`);
+      const allTrans = await res.json();
+      setStudentTransactions(
+        allTrans.filter((t: any) => t.student?.id === studentId)
+      );
+    } catch {
+      setStudentTransactions([]);
+    }
+  };
+  const handleScanStudent = () => {
+    if (nisInput.trim()) fetchStudentByNIS(nisInput.trim());
+  };
+  const handleSearchByNIS = () => {
+    if (nisInput.trim()) fetchStudentByNIS(nisInput.trim());
   };
 
   const addToCart = (product: Product) => {
@@ -150,7 +175,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
     );
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!currentStudent) {
       toast({
         title: "Error",
@@ -159,7 +184,10 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
       });
       return;
     }
-
+    if (!cashier) {
+      toast({ title: "Data kasir tidak ditemukan", variant: "destructive" });
+      return;
+    }
     const total = getTotalAmount();
     if (currentStudent.saldo < total) {
       toast({
@@ -171,21 +199,40 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
       });
       return;
     }
-
-    // Proses checkout
-    setCurrentStudent({
-      ...currentStudent,
-      saldo: currentStudent.saldo - total,
-    });
-    setCart([]);
-
-    toast({
-      title: "Transaksi Berhasil",
-      description: `Total: ${formatCurrency(
-        total
-      )}. Sisa saldo: ${formatCurrency(currentStudent.saldo - total)}`,
-    });
+    try {
+      // Kirim transaksi ke backend
+      const res = await fetch(`/api/transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: currentStudent.id, // gunakan id siswa
+          cashierId: cashier.id, // gunakan id kasir hasil fetch
+          items: cart.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity ?? 1,
+            price: item.price,
+          })),
+          paymentMethod: "QR_CODE", // atau "CASH" sesuai kebutuhan
+          notes: "",
+        }),
+      });
+      if (!res.ok) throw new Error("Gagal menyimpan transaksi");
+      // Fetch saldo terbaru
+      await fetchStudentByNIS(currentStudent.nis);
+      setCart([]);
+      toast({
+        title: "Transaksi Berhasil",
+        description: `Total: ${formatCurrency(total)}`,
+      });
+    } catch {
+      toast({ title: "Gagal menyimpan transaksi", variant: "destructive" });
+    }
   };
+
+  const filteredProducts =
+    selectedCategory === "ALL"
+      ? products
+      : products.filter((p) => p.category === selectedCategory);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
@@ -364,184 +411,160 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="all" className="space-y-4">
-                  <TabsList className="grid w-full grid-cols-3 bg-emerald-50 border-emerald-200">
-                    <TabsTrigger
-                      value="all"
-                      className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+                {/* Redesign filter kategori produk */}
+                <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
+                  {[
+                    { label: "Semua", value: "ALL" },
+                    { label: "Makanan Berat", value: "MAKANAN_BERAT" },
+                    { label: "Makanan Ringan", value: "MAKANAN_RINGAN" },
+                    { label: "Minuman", value: "MINUMAN" },
+                    { label: "Snack", value: "SNACK" },
+                    { label: "Lainnya", value: "LAINNYA" },
+                  ].map((cat) => (
+                    <button
+                      key={cat.value}
+                      onClick={() => setSelectedCategory(cat.value)}
+                      className={`px-4 py-2 rounded-full font-semibold border transition-colors whitespace-nowrap ${
+                        selectedCategory === cat.value
+                          ? "bg-emerald-700 text-white border-emerald-700 shadow"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                      }`}
                     >
-                      Semua
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="makanan"
-                      className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
-                    >
-                      Makanan
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="minuman"
-                      className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
-                    >
-                      Minuman
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="all" className="space-y-4">
-                    {loadingProducts ? (
-                      <p className="text-center py-8">Loading products...</p>
-                    ) : errorProducts ? (
-                      <p className="text-center py-8 text-red-500">
-                        {errorProducts}
-                      </p>
-                    ) : (
-                      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {products.map((product) => (
-                          <Card
-                            key={product.id}
-                            className="hover:shadow-lg transition-shadow border-emerald-200"
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Render produk sesuai kategori */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  {filteredProducts.length === 0 ? (
+                    <div className="text-gray-500 text-center col-span-full">
+                      Tidak ada produk.
+                    </div>
+                  ) : (
+                    filteredProducts.map((product) => (
+                      <Card
+                        key={product.id}
+                        className="border-emerald-200 shadow-sm hover:shadow-lg transition-shadow rounded-xl flex items-center p-3"
+                      >
+                        {/* Gambar produk atau ikon */}
+                        <div className="flex-shrink-0 w-16 h-16 bg-emerald-50 rounded-lg flex items-center justify-center mr-4">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-14 h-14 object-cover rounded-md"
+                            />
+                          ) : (
+                            <ShoppingCart className="h-8 w-8 text-emerald-400" />
+                          )}
+                        </div>
+                        {/* Info produk */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-emerald-800 truncate text-lg">
+                              {product.name}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 ml-2">
+                              {product.category}
+                            </span>
+                          </div>
+                          <div className="font-bold text-lg text-emerald-700 mb-1">
+                            {formatCurrency(product.price)}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              variant={
+                                product.stock > 5 ? "secondary" : "destructive"
+                              }
+                              className={
+                                product.stock > 5
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-red-100 text-red-700"
+                              }
+                            >
+                              Stok: {product.stock}
+                            </Badge>
+                          </div>
+                        </div>
+                        {/* Tombol tambah */}
+                        <div className="ml-4 flex-shrink-0">
+                          <Button
+                            onClick={() => addToCart(product)}
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-full p-3"
+                            size="icon"
                           >
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-semibold">
-                                  {product.name}
-                                </h3>
-                                <Badge
-                                  variant={
-                                    product.stock > 10
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                                >
-                                  Stok: {product.stock}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">
-                                {product.category}
-                              </p>
-                              <p className="font-bold text-emerald-700 mb-3">
-                                {formatCurrency(product.price)}
-                              </p>
-                              <Button
-                                onClick={() => addToCart(product)}
-                                className="w-full bg-emerald-700 hover:bg-emerald-800"
-                                disabled={product.stock === 0}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Tambah
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="makanan">
-                    {loadingProducts ? (
-                      <p className="text-center py-8">Loading products...</p>
-                    ) : errorProducts ? (
-                      <p className="text-center py-8 text-red-500">
-                        {errorProducts}
-                      </p>
-                    ) : (
-                      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {products
-                          .filter((p) => p.category === "Makanan Berat")
-                          .map((product) => (
-                            <Card
-                              key={product.id}
-                              className="hover:shadow-lg transition-shadow border-emerald-200"
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex justify-between items-start mb-2">
-                                  <h3 className="font-semibold">
-                                    {product.name}
-                                  </h3>
-                                  <Badge
-                                    variant={
-                                      product.stock > 10
-                                        ? "secondary"
-                                        : "destructive"
-                                    }
-                                    className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                                  >
-                                    Stok: {product.stock}
-                                  </Badge>
-                                </div>
-                                <p className="font-bold text-emerald-700 mb-3">
-                                  {formatCurrency(product.price)}
-                                </p>
-                                <Button
-                                  onClick={() => addToCart(product)}
-                                  className="w-full bg-emerald-700 hover:bg-emerald-800"
-                                  disabled={product.stock === 0}
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Tambah
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          ))}
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="minuman">
-                    {loadingProducts ? (
-                      <p className="text-center py-8">Loading products...</p>
-                    ) : errorProducts ? (
-                      <p className="text-center py-8 text-red-500">
-                        {errorProducts}
-                      </p>
-                    ) : (
-                      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {products
-                          .filter((p) => p.category === "Minuman")
-                          .map((product) => (
-                            <Card
-                              key={product.id}
-                              className="hover:shadow-lg transition-shadow border-emerald-200"
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex justify-between items-start mb-2">
-                                  <h3 className="font-semibold">
-                                    {product.name}
-                                  </h3>
-                                  <Badge
-                                    variant={
-                                      product.stock > 10
-                                        ? "secondary"
-                                        : "destructive"
-                                    }
-                                    className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                                  >
-                                    Stok: {product.stock}
-                                  </Badge>
-                                </div>
-                                <p className="font-bold text-emerald-700 mb-3">
-                                  {formatCurrency(product.price)}
-                                </p>
-                                <Button
-                                  onClick={() => addToCart(product)}
-                                  className="w-full bg-emerald-700 hover:bg-emerald-800"
-                                  disabled={product.stock === 0}
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Tambah
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          ))}
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                            <Plus className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+      {/* Tambahkan riwayat transaksi siswa */}
+      {currentStudent && (
+        <Card className="border-emerald-200 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-emerald-800">
+              <Receipt className="h-5 w-5" />
+              <span>Riwayat Transaksi Siswa</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {studentTransactions.length === 0 ? (
+                <div className="text-gray-500 text-center">
+                  Belum ada transaksi.
+                </div>
+              ) : (
+                studentTransactions.slice(0, 5).map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-emerald-100 bg-white shadow-sm"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <User className="h-4 w-4 text-emerald-500" />
+                        <span className="font-bold text-emerald-800 truncate">
+                          {t.student?.name}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {t.transactionItems && t.transactionItems.length > 0 ? (
+                          t.transactionItems.map((item: any, idx: number) => (
+                            <span
+                              key={idx}
+                              className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full text-xs border border-emerald-100"
+                            >
+                              {item.product?.name || item.name} x{item.quantity}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-xs">
+                            Tidak ada produk
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(t.createdAt).toLocaleString("id-ID")}
+                      </div>
+                    </div>
+                    <div className="ml-4 text-right">
+                      <div className="font-bold text-lg text-emerald-700">
+                        {formatCurrency(Number(t.totalAmount || t.amount || 0))}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

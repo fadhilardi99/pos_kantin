@@ -371,4 +371,12 @@ export class UserService {
       },
     });
   }
+
+  // Get cashier by userId
+  static async getCashierByUserId(userId: string) {
+    return await prisma.cashier.findUnique({
+      where: { userId },
+      include: { user: true },
+    });
+  }
 }

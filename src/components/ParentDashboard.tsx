@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, LogOut, Plus, Search, History } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface User {
   name: string;
@@ -50,6 +51,11 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
   const [loadingTx, setLoadingTx] = useState(true);
   const [errorTx, setErrorTx] = useState<string | null>(null);
+
+  // Toggle for showing all history
+  const [showAllTopUps, setShowAllTopUps] = useState(false);
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [activeTab, setActiveTab] = useState("topup");
 
   // Fetch children (students) from backend
   useEffect(() => {
@@ -194,6 +200,21 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
 
   const quickTopUpAmounts = [10000, 25000, 50000, 100000];
 
+  const now = new Date();
+  const topUpsThisMonth = topUpHistory.filter(
+    (t) =>
+      t.status === "APPROVED" &&
+      new Date(t.createdAt).getMonth() === now.getMonth() &&
+      new Date(t.createdAt).getFullYear() === now.getFullYear()
+  );
+  const totalTopUpThisMonth = topUpsThisMonth.reduce(
+    (sum, t) => sum + Number(t.amount || 0),
+    0
+  );
+  const countTopUpThisMonth = topUpsThisMonth.length;
+  const avgTopUpThisMonth =
+    countTopUpThisMonth > 0 ? totalTopUpThisMonth / countTopUpThisMonth : 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
       {/* Header */}
@@ -277,16 +298,20 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Top Up:</span>
                     <span className="font-bold text-emerald-700">
-                      {formatCurrency(105000)}
+                      {formatCurrency(totalTopUpThisMonth)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Jumlah Top Up:</span>
-                    <span className="font-bold">3 kali</span>
+                    <span className="font-bold">
+                      {countTopUpThisMonth} kali
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Rata-rata:</span>
-                    <span className="font-bold">{formatCurrency(35000)}</span>
+                    <span className="font-bold">
+                      {formatCurrency(avgTopUpThisMonth)}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -391,76 +416,161 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-emerald-800">
                   <History className="h-5 w-5" />
-                  <span>Riwayat Top Up</span>
+                  <span>Riwayat Top Up & Transaksi</span>
                 </CardTitle>
                 <CardDescription>
-                  Histori semua transaksi top up yang telah dilakukan
+                  Histori semua top up dan transaksi anak Anda
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {topUpHistory.map((topup) => (
-                    <div
-                      key={topup.id}
-                      className="p-4 bg-gradient-to-r from-emerald-100 to-green-100 rounded-lg border border-emerald-200 mb-2"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="font-semibold text-emerald-800">
-                            {topup.student?.name}
-                          </div>
-                          <div className="text-sm text-emerald-600">
-                            Tanggal:{" "}
-                            {new Date(topup.createdAt).toLocaleDateString(
-                              "id-ID"
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Jumlah:{" "}
-                            <span className="font-bold">
-                              {formatCurrency(Number(topup.amount))}
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Metode: {topup.method}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Status:{" "}
-                            <span
-                              className={
-                                topup.status === "REJECTED"
-                                  ? "text-red-600"
-                                  : topup.status === "APPROVED"
-                                  ? "text-emerald-700"
-                                  : "text-gray-700"
-                              }
-                            >
-                              {topup.status}
-                            </span>
-                          </div>
-                          {topup.status === "REJECTED" && topup.notes && (
-                            <div className="mt-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
-                              <span className="font-semibold">
-                                Alasan Penolakan:
-                              </span>{" "}
-                              {topup.notes}
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="topup">Top Up</TabsTrigger>
+                    <TabsTrigger value="transaksi">Transaksi Anak</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="topup">
+                    <div className="space-y-4">
+                      {(showAllTopUps
+                        ? topUpHistory
+                        : topUpHistory.slice(0, 5)
+                      ).map((topup) => (
+                        <div
+                          key={topup.id}
+                          className="p-4 bg-gradient-to-r from-emerald-100 to-green-100 rounded-lg border border-emerald-200 mb-2"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-semibold text-emerald-800">
+                                {topup.student?.name}
+                              </div>
+                              <div className="text-sm text-emerald-600">
+                                Tanggal:{" "}
+                                {new Date(topup.createdAt).toLocaleDateString(
+                                  "id-ID"
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Jumlah:{" "}
+                                <span className="font-bold">
+                                  {formatCurrency(Number(topup.amount))}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Metode: {topup.method}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Status:{" "}
+                                <span
+                                  className={
+                                    topup.status === "REJECTED"
+                                      ? "text-red-600"
+                                      : topup.status === "APPROVED"
+                                      ? "text-emerald-700"
+                                      : "text-gray-700"
+                                  }
+                                >
+                                  {topup.status}
+                                </span>
+                              </div>
+                              {topup.status === "REJECTED" && topup.notes && (
+                                <div className="mt-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+                                  <span className="font-semibold">
+                                    Alasan Penolakan:
+                                  </span>{" "}
+                                  {topup.notes}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 text-center">
-                  <Button
-                    variant="outline"
-                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <History className="h-4 w-4 mr-2" />
-                    Lihat Semua Riwayat
-                  </Button>
-                </div>
+                    {topUpHistory.length > 5 && (
+                      <div className="mt-6 text-center">
+                        <Button
+                          variant="outline"
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                          onClick={() => setShowAllTopUps((v) => !v)}
+                        >
+                          <History className="h-4 w-4 mr-2" />
+                          {showAllTopUps
+                            ? "Tampilkan Lebih Sedikit"
+                            : "Lihat Semua Riwayat"}
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="transaksi">
+                    <div className="space-y-4">
+                      {(showAllTransactions
+                        ? transactionHistory
+                        : transactionHistory.slice(0, 5)
+                      ).map((t) => (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-100"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-emerald-800">
+                              {t.student?.name}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mb-1">
+                              {(t.transactionItems &&
+                              t.transactionItems.length > 0
+                                ? t.transactionItems
+                                : t.items && t.items.length > 0
+                                ? t.items
+                                : []
+                              ).map((item: any, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs border border-emerald-200"
+                                >
+                                  {item.product?.name || item.name} x
+                                  {item.quantity}
+                                </span>
+                              ))}
+                              {!t.transactionItems &&
+                                (!t.items || t.items.length === 0) && (
+                                  <span className="text-gray-400 text-xs">
+                                    Tidak ada produk
+                                  </span>
+                                )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(t.createdAt).toLocaleString("id-ID")}
+                            </div>
+                          </div>
+                          <div className="ml-4 text-right">
+                            <div className="font-bold text-lg text-emerald-700">
+                              {formatCurrency(
+                                Number(t.totalAmount || t.amount || 0)
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {transactionHistory.length > 5 && (
+                      <div className="mt-6 text-center">
+                        <Button
+                          variant="outline"
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                          onClick={() => setShowAllTransactions((v) => !v)}
+                        >
+                          <History className="h-4 w-4 mr-2" />
+                          {showAllTransactions
+                            ? "Tampilkan Lebih Sedikit"
+                            : "Lihat Semua Riwayat"}
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>

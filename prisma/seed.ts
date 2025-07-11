@@ -253,6 +253,39 @@ async function main() {
     },
   });
 
+  // Cek apakah sudah ada super admin
+  const superAdminEmail = "superadmin@kantin.com";
+  const existing = await prisma.user.findUnique({
+    where: { email: superAdminEmail },
+  });
+  if (existing) {
+    console.log("Super admin already exists");
+    return;
+  }
+
+  // Buat user super admin
+  const password = await bcrypt.hash("superadmin123", 10);
+  const user = await prisma.user.create({
+    data: {
+      email: superAdminEmail,
+      password,
+      name: "Super Admin",
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
+
+  // Buat admin (harus isi nip dan position)
+  await prisma.admin.create({
+    data: {
+      userId: user.id,
+      nip: "00000001",
+      position: "Super Admin",
+    },
+  });
+
+  console.log("Super admin created!");
+
   console.log("✅ Database seeded successfully!");
   console.log("📊 Created:");
   console.log(`   - School Settings: ${schoolSettings.schoolName}`);
