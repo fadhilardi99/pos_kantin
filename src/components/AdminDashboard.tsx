@@ -36,6 +36,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { DataTable } from "@/components/ui/data-table";
+import { DataGrid } from "@/components/ui/data-grid";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -172,6 +174,11 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     barcode: "",
   });
   const [addProductLoading, setAddProductLoading] = useState(false);
+  // Tambahkan state untuk edit produk
+  const [editProductModal, setEditProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [newStock, setNewStock] = useState(0);
+  const [editProductLoading, setEditProductLoading] = useState(false);
 
   // Fetch settings saat buka tab
   useEffect(() => {
@@ -443,20 +450,81 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   // Hitung jumlah top up pending sebelum return
   const pendingTopupCount = topups.filter((t) => t.status === "PENDING").length;
 
-  // Polling otomatis fetch transaksi setiap 10 detik
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Panggil ulang useEffect fetchTransactions dengan cara update state dummy
-      setLoadingTransactions(true);
-      setErrorTransactions(null);
-      fetch("/api/transactions")
-        .then((res) => res.json())
-        .then((data) => setTransactions(data))
-        .catch(() => setErrorTransactions("Gagal memuat transaksi"))
-        .finally(() => setLoadingTransactions(false));
-    }, 10000); // 10 detik
-    return () => clearInterval(interval);
-  }, []);
+  // Fungsi untuk edit produk (tambah stok)
+  const handleEditProduct = async (product: any) => {
+    setEditingProduct(product);
+    setNewStock(0);
+    setEditProductModal(true);
+  };
+
+  // Fungsi untuk update stok produk
+  const handleUpdateStock = async () => {
+    if (!editingProduct || newStock <= 0) return;
+
+    setEditProductLoading(true);
+    try {
+      const res = await fetch(`/api/products/${editingProduct.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stock: editingProduct.stock + newStock,
+        }),
+      });
+
+      if (!res.ok) {
+        let errMsg = "Gagal update stok produk";
+        try {
+          const err = await res.json();
+          if (err && err.message) errMsg = err.message;
+        } catch {}
+        throw new Error(errMsg);
+      }
+
+      toast({ title: "Stok berhasil ditambahkan" });
+      setEditProductModal(false);
+      setEditingProduct(null);
+      setNewStock(0);
+
+      // Refresh data produk
+      setLoadingProducts(true);
+      const res2 = await fetch("/api/products");
+      setProducts(await res2.json());
+      setLoadingProducts(false);
+    } catch (error: any) {
+      toast({
+        title: error.message || "Gagal update stok produk",
+        variant: "destructive",
+      });
+    } finally {
+      setEditProductLoading(false);
+    }
+  };
+
+  // Fungsi untuk hapus produk
+  const handleDeleteProduct = async (product: any) => {
+    if (!window.confirm(`Yakin hapus produk "${product.name}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Gagal hapus produk");
+
+      toast({ title: "Produk berhasil dihapus" });
+
+      // Refresh data produk
+      setLoadingProducts(true);
+      const res2 = await fetch("/api/products");
+      setProducts(await res2.json());
+      setLoadingProducts(false);
+    } catch (error) {
+      toast({
+        title: "Gagal hapus produk",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
@@ -652,149 +720,110 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                     <TabsTrigger value="tab-admin">Admin</TabsTrigger>
                   </TabsList>
                   <TabsContent value="tab-siswa">
-                    {loadingStudents ? (
-                      <p>Loading students...</p>
-                    ) : errorStudents ? (
-                      <p className="text-red-500">{errorStudents}</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {students
-                          .filter((u) => u.role === "STUDENT" && u.student)
-                          .map((u) => {
-                            const s = u.student;
-                            return (
-                              <div
-                                key={s.id}
-                                className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-4">
-                                    <div>
-                                      <p className="font-semibold text-gray-800">
-                                        {s.name}
-                                      </p>
-                                      <p className="text-sm text-gray-600">
-                                        NIS: {s.nis} • Kelas: {s.class}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-4">
-                                  <div className="text-right">
-                                    <p className="font-bold text-emerald-700">
-                                      {formatCurrency(s.saldo)}
-                                    </p>
-                                    <Badge
-                                      variant={
-                                        s.status === "ACTIVE"
-                                          ? "default"
-                                          : "secondary"
-                                      }
-                                      className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                                    >
-                                      {s.status === "ACTIVE"
-                                        ? "Aktif"
-                                        : "Nonaktif"}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex space-x-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                                      onClick={() => {
-                                        setSelectedStudent(s);
-                                        setShowStudentDetail(true);
-                                      }}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                                      onClick={() => {
-                                        setTopUpStudent(s);
-                                        setTopUpAmount(0);
-                                        setTopUpModal(true);
-                                      }}
-                                    >
-                                      Top Up
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    )}
+                    <DataTable
+                      data={students
+                        .filter((u) => u.role === "STUDENT" && u.student)
+                        .map((u) => u.student)}
+                      columns={[
+                        {
+                          key: "name",
+                          label: "Nama Siswa",
+                          sortable: true,
+                        },
+                        {
+                          key: "nis",
+                          label: "NIS",
+                          sortable: true,
+                        },
+                        {
+                          key: "class",
+                          label: "Kelas",
+                          sortable: true,
+                          render: (value, row) =>
+                            `${row.grade || "-"} ${value || "-"}`.trim(),
+                        },
+                        {
+                          key: "saldo",
+                          label: "Saldo",
+                          sortable: true,
+                          render: (value) => formatCurrency(value || 0),
+                        },
+                        {
+                          key: "status",
+                          label: "Status",
+                          sortable: true,
+                          render: (value) => (
+                            <Badge
+                              variant={
+                                value === "ACTIVE" ? "default" : "secondary"
+                              }
+                              className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                            >
+                              {value === "ACTIVE" ? "Aktif" : "Nonaktif"}
+                            </Badge>
+                          ),
+                        },
+                      ]}
+                      title="Data Siswa"
+                      description="Kelola data siswa dan saldo mereka"
+                      loading={loadingStudents}
+                      emptyMessage={errorStudents || "Tidak ada data siswa"}
+                      onView={(student) => {
+                        setSelectedStudent(student);
+                        setShowStudentDetail(true);
+                      }}
+                      itemsPerPage={10}
+                      searchFields={["name", "nis", "class", "grade"]}
+                    />
                   </TabsContent>
                   <TabsContent value="tab-parent">
-                    {loadingParents ? (
-                      <p>Loading orang tua...</p>
-                    ) : errorParents ? (
-                      <p className="text-red-500">{errorParents}</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {parents.map((p) => (
-                          <div
-                            key={p.id}
-                            className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                          >
-                            <div>
-                              <p className="font-semibold text-gray-800">
-                                {p.name}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Telepon: {p.parent?.phone || "-"}
-                              </p>
-                              {p.parent?.parentStudents?.length > 0 && (
-                                <div className="text-sm text-gray-600">
-                                  Anak:
-                                  <ul className="list-disc ml-4">
-                                    {p.parent.parentStudents.map((ps: any) => (
-                                      <li key={ps.studentId}>
-                                        {ps.student?.user?.name || "-"}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditParent(p);
-                                  setModalEditParent(true);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                                onClick={() => {
-                                  setSelectedParent(p);
-                                  setShowParentDetail(true);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                              >
-                                Top Up
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <DataTable
+                      data={parents}
+                      columns={[
+                        {
+                          key: "name",
+                          label: "Nama Orang Tua",
+                          sortable: true,
+                        },
+                        {
+                          key: "parent.phone",
+                          label: "Telepon",
+                          sortable: true,
+                          render: (value, row) => row.parent?.phone || "-",
+                        },
+                        {
+                          key: "parent.nik",
+                          label: "NIK",
+                          sortable: true,
+                          render: (value, row) => row.parent?.nik || "-",
+                        },
+                        {
+                          key: "parent.address",
+                          label: "Alamat",
+                          sortable: true,
+                          render: (value, row) => row.parent?.address || "-",
+                        },
+                        {
+                          key: "parent.parentStudents",
+                          label: "Jumlah Anak",
+                          sortable: true,
+                          render: (value, row) =>
+                            row.parent?.parentStudents?.length || 0,
+                        },
+                      ]}
+                      title="Data Orang Tua"
+                      description="Kelola data orang tua siswa"
+                      loading={loadingParents}
+                      emptyMessage={errorParents || "Tidak ada data orang tua"}
+                      onView={(parent) => {
+                        setSelectedParent(parent);
+                        setShowParentDetail(true);
+                      }}
+                      onEdit={(parent) => {
+                        setEditParent(parent);
+                        setModalEditParent(true);
+                      }}
+                    />
                   </TabsContent>
                   <TabsContent value="tab-cashier">
                     {loadingCashiers ? (
@@ -887,150 +916,147 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
           {/* Products Management */}
           <TabsContent value="produk">
-            <Card className="border-emerald-200 mt-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-emerald-800">
-                    Daftar Produk
-                  </CardTitle>
-                  {user.role === "ADMIN" && (
-                    <Button
-                      onClick={() => setAddProductModal(true)}
-                      className="bg-emerald-700 text-white ml-2"
-                    >
-                      Tambah Produk
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingProducts ? (
-                  <p>Loading produk...</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {products.map((p) => (
-                      <div
-                        key={p.id}
-                        className="p-4 border rounded-lg bg-emerald-50"
-                      >
-                        <div className="font-bold text-emerald-800">
-                          {p.name}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Harga: {p.price}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Stok: {p.stock}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Kategori: {p.category}
-                        </div>
+            <DataGrid
+              data={products}
+              title="Daftar Produk"
+              description="Kelola produk kantin"
+              loading={loadingProducts}
+              emptyMessage={errorProducts || "Tidak ada data produk"}
+              searchFields={["name", "category"]}
+              addButton={
+                user.role === "ADMIN" ? (
+                  <Button
+                    onClick={() => setAddProductModal(true)}
+                    className="bg-emerald-700 hover:bg-emerald-800"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah Produk
+                  </Button>
+                ) : undefined
+              }
+              renderItem={(product) => (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <ShoppingCart className="h-8 w-8 text-emerald-400" />
                       </div>
-                    ))}
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-emerald-800 text-lg truncate">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {product.description || "Tidak ada deskripsi"}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Harga:</span>
+                      <span className="font-bold text-emerald-700 text-lg">
+                        {formatCurrency(product.price)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Stok:</span>
+                      <Badge
+                        variant={
+                          product.stock > 10 ? "secondary" : "destructive"
+                        }
+                        className={
+                          product.stock > 10
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-red-100 text-red-700"
+                        }
+                      >
+                        {product.stock} stok
+                      </Badge>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Kategori:</span>
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-200 text-emerald-700"
+                      >
+                        {product.category}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+              onEdit={handleEditProduct}
+              onDelete={handleDeleteProduct}
+            />
           </TabsContent>
 
           {/* Transactions */}
           <TabsContent value="transactions">
-            <Card className="border-emerald-200">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-emerald-800">
-                      Laporan Transaksi
-                    </CardTitle>
-                    <CardDescription>
-                      Riwayat semua transaksi siswa
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Excel
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingTransactions ? (
-                  <p>Loading transactions...</p>
-                ) : errorTransactions ? (
-                  <p className="text-red-500">{errorTransactions}</p>
-                ) : (
-                  <div className="space-y-4">
-                    {transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-4">
-                            <div>
-                              <p className="font-semibold text-gray-800">
-                                {transaction.student?.name}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {/* Render item list jika array, atau tampilkan string jika sudah diolah */}
-                                {Array.isArray(transaction.items)
-                                  ? transaction.items.map(
-                                      (item: any, idx: number) => (
-                                        <span key={idx}>
-                                          {item.product?.name || item.name} x
-                                          {item.quantity}
-                                          {idx < transaction.items.length - 1
-                                            ? ", "
-                                            : ""}
-                                        </span>
-                                      )
-                                    )
-                                  : transaction.items}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Kasir: {transaction.cashier?.user?.name || "-"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-emerald-700">
-                            {formatCurrency(
-                              Number(
-                                transaction.amount ||
-                                  transaction.totalAmount ||
-                                  0
-                              )
-                            )}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {transaction.date ||
-                              (transaction.createdAt
-                                ? new Date(
-                                    transaction.createdAt
-                                  ).toLocaleString("id-ID")
-                                : "")}
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 mt-2"
-                            onClick={() => {
-                              setSelectedTransaction(transaction);
-                              setShowTransactionDetail(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <DataTable
+              data={transactions}
+              columns={[
+                {
+                  key: "student.name",
+                  label: "Nama Siswa",
+                  sortable: true,
+                  render: (value, row) => row.student?.name || "-",
+                },
+                {
+                  key: "cashier.user.name",
+                  label: "Kasir",
+                  sortable: true,
+                  render: (value, row) => row.cashier?.user?.name || "-",
+                },
+                {
+                  key: "amount",
+                  label: "Total",
+                  sortable: true,
+                  render: (value, row) =>
+                    formatCurrency(Number(row.amount || row.totalAmount || 0)),
+                },
+                {
+                  key: "createdAt",
+                  label: "Tanggal",
+                  sortable: true,
+                  render: (value, row) => {
+                    const date = row.date || row.createdAt;
+                    return date ? new Date(date).toLocaleString("id-ID") : "-";
+                  },
+                },
+                {
+                  key: "actions",
+                  label: "Aksi",
+                  sortable: false,
+                  render: (value, row) => (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedTransaction(row);
+                        setShowTransactionDetail(true);
+                      }}
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  ),
+                },
+              ]}
+              title="Laporan Transaksi"
+              description="Riwayat semua transaksi siswa"
+              loading={loadingTransactions}
+              emptyMessage={errorTransactions || "Tidak ada data transaksi"}
+              itemsPerPage={15}
+            />
           </TabsContent>
 
           {/* Reports */}
@@ -1123,86 +1149,80 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
           {/* Approval Top Up */}
           <TabsContent value="approval">
-            <Card className="border-emerald-200 mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-emerald-800">
-                  <CreditCard className="h-5 w-5" />
-                  <span>Approval Top Up</span>
-                </CardTitle>
-                <CardDescription>
-                  Daftar permintaan top up yang menunggu persetujuan
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingTopups ? (
-                  <div>Loading top up...</div>
-                ) : errorTopups ? (
-                  <div className="text-red-500">{errorTopups}</div>
-                ) : (
-                  <div className="space-y-4">
-                    {topups.filter((t) => t.status === "PENDING").length ===
-                    0 ? (
-                      <div className="text-gray-500">
-                        Tidak ada top up pending
-                      </div>
-                    ) : (
-                      topups
-                        .filter((t) => t.status === "PENDING")
-                        .map((t) => (
-                          <div
-                            key={t.id}
-                            className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-200"
-                          >
-                            <div>
-                              <div className="font-semibold text-emerald-800">
-                                {t.student?.name}
-                              </div>
-                              <div className="text-sm text-emerald-600">
-                                NIS: {t.student?.nis}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                Jumlah:{" "}
-                                <span className="font-bold">
-                                  {formatCurrency(Number(t.amount))}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                Metode: {t.method}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                disabled={actionLoading === t.id + "approve"}
-                                onClick={() =>
-                                  handleTopupAction(t.id, "approve")
-                                }
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                              >
-                                {actionLoading === t.id + "approve"
-                                  ? "Memproses..."
-                                  : "Approve"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                disabled={actionLoading === t.id + "reject"}
-                                onClick={() =>
-                                  setRejectModal({ open: true, id: t.id })
-                                }
-                              >
-                                {actionLoading === t.id + "reject"
-                                  ? "Memproses..."
-                                  : "Reject"}
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <DataTable
+              data={topups.filter((t) => t.status === "PENDING")}
+              columns={[
+                {
+                  key: "student.name",
+                  label: "Nama Siswa",
+                  sortable: true,
+                  render: (value, row) => row.student?.name || "-",
+                },
+                {
+                  key: "student.nis",
+                  label: "NIS",
+                  sortable: true,
+                  render: (value, row) => row.student?.nis || "-",
+                },
+                {
+                  key: "amount",
+                  label: "Jumlah",
+                  sortable: true,
+                  render: (value) => formatCurrency(value || 0),
+                },
+                {
+                  key: "method",
+                  label: "Metode",
+                  sortable: true,
+                },
+                {
+                  key: "createdAt",
+                  label: "Tanggal",
+                  sortable: true,
+                  render: (value) => {
+                    return value
+                      ? new Date(value).toLocaleString("id-ID")
+                      : "-";
+                  },
+                },
+                {
+                  key: "actions",
+                  label: "Aksi",
+                  sortable: false,
+                  render: (value, row) => (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={actionLoading === row.id + "approve"}
+                        onClick={() => handleTopupAction(row.id, "approve")}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        {actionLoading === row.id + "approve"
+                          ? "Memproses..."
+                          : "Approve"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={actionLoading === row.id + "reject"}
+                        onClick={() =>
+                          setRejectModal({ open: true, id: row.id })
+                        }
+                      >
+                        {actionLoading === row.id + "reject"
+                          ? "Memproses..."
+                          : "Reject"}
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              title="Approval Top Up"
+              description="Daftar permintaan top up yang menunggu persetujuan"
+              loading={loadingTopups}
+              emptyMessage={errorTopups || "Tidak ada data top up pending"}
+              itemsPerPage={10}
+            />
           </TabsContent>
 
           {/* Settings */}
@@ -2006,7 +2026,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
         open={showTransactionDetail}
         onOpenChange={setShowTransactionDetail}
       >
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-emerald-800">
               Detail Transaksi
@@ -2045,20 +2065,50 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               </div>
               <div>
                 <span className="font-semibold text-gray-700">Item:</span>
-                <ul className="list-disc ml-6 mt-1 text-gray-900">
-                  {Array.isArray(selectedTransaction.items) ? (
-                    selectedTransaction.items.map((item: any, idx: number) => (
-                      <li key={idx}>
-                        {item.product?.name || item.name} x{item.quantity}
-                      </li>
-                    ))
+                <div className="mt-2 space-y-2">
+                  {Array.isArray(selectedTransaction.transaction_items) &&
+                  selectedTransaction.transaction_items.length > 0 ? (
+                    selectedTransaction.transaction_items.map(
+                      (item: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {item.product?.name || item.name}
+                            </span>
+                            <span className="text-sm text-gray-600 ml-2">
+                              x{item.quantity}
+                            </span>
+                          </div>
+                          <span className="font-semibold text-emerald-700">
+                            {formatCurrency(
+                              (item.product?.price || item.price || 0) *
+                                item.quantity
+                            )}
+                          </span>
+                        </div>
+                      )
+                    )
                   ) : (
-                    <li>{selectedTransaction.items}</li>
+                    <div className="p-2 bg-gray-50 rounded text-gray-500">
+                      Tidak ada item
+                    </div>
                   )}
-                </ul>
+                </div>
               </div>
             </div>
           )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTransactionDetail(false)}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              Tutup
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {/* Modal Tambah Admin */}
@@ -2321,6 +2371,60 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               className="w-full bg-emerald-700 hover:bg-emerald-800"
             >
               {addProductLoading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Edit Produk */}
+      <Dialog open={editProductModal} onOpenChange={setEditProductModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Stok Produk</DialogTitle>
+          </DialogHeader>
+          {editingProduct && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nama Produk</Label>
+                <p className="font-semibold text-gray-900">
+                  {editingProduct.name}
+                </p>
+              </div>
+              <div>
+                <Label>Stok Saat Ini</Label>
+                <p className="font-semibold text-emerald-700">
+                  {editingProduct.stock} stok
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="new-stock">Tambah Stok</Label>
+                <Input
+                  id="new-stock"
+                  type="number"
+                  min="1"
+                  value={newStock === 0 ? "" : newStock}
+                  onChange={(e) => {
+                    // Hapus leading zero dan pastikan hanya angka positif
+                    const val = e.target.value.replace(/^0+/, "");
+                    setNewStock(val === "" ? 0 : Math.max(0, Number(val)));
+                  }}
+                  placeholder="Masukkan jumlah stok yang ditambahkan"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditProductModal(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleUpdateStock}
+              disabled={editProductLoading || newStock <= 0}
+              className="bg-emerald-700 hover:bg-emerald-800"
+            >
+              {editProductLoading ? "Menyimpan..." : "Simpan"}
             </Button>
           </DialogFooter>
         </DialogContent>
