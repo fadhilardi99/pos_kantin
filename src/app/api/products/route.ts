@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProductService } from "@/lib/services";
 import { ProductCategory } from "@prisma/client";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 export async function GET() {
   const products = await ProductService.getAllProducts();

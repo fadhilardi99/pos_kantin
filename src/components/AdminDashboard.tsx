@@ -346,6 +346,22 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     );
   };
 
+  // Fungsi untuk mendapatkan top produk terlaris
+  const getTopProducts = () => {
+    const productSales: Record<string, number> = {};
+    transactions.forEach((t) => {
+      const allItems = t.transaction_items || [];
+      allItems.forEach((item: any) => {
+        const name = item.product?.name || item.name;
+        if (!name) return;
+        productSales[name] = (productSales[name] || 0) + (item.quantity || 1);
+      });
+    });
+    return Object.entries(productSales)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
+      .slice(0, 5);
+  };
+
   // Handler for approve/reject topup
   async function handleTopupAction(
     id: string,
@@ -423,6 +439,24 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   };
 
   // Hapus handler backup dan restore
+
+  // Hitung jumlah top up pending sebelum return
+  const pendingTopupCount = topups.filter((t) => t.status === "PENDING").length;
+
+  // Polling otomatis fetch transaksi setiap 10 detik
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Panggil ulang useEffect fetchTransactions dengan cara update state dummy
+      setLoadingTransactions(true);
+      setErrorTransactions(null);
+      fetch("/api/transactions")
+        .then((res) => res.json())
+        .then((data) => setTransactions(data))
+        .catch(() => setErrorTransactions("Gagal memuat transaksi"))
+        .finally(() => setLoadingTransactions(false));
+    }, 10000); // 10 detik
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
@@ -551,6 +585,17 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               Laporan Transaksi
             </TabsTrigger>
             <TabsTrigger
+              value="approval"
+              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
+            >
+              Approval Top Up
+              {pendingTopupCount > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                  {pendingTopupCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
               value="reports"
               className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
             >
@@ -561,12 +606,6 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
               className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
             >
               Pengaturan
-            </TabsTrigger>
-            <TabsTrigger
-              value="approval"
-              className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white"
-            >
-              Approval Top Up
             </TabsTrigger>
           </TabsList>
 
@@ -1057,30 +1096,25 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span>Nasi Gudeg</span>
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                        15 terjual
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Mie Ayam</span>
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                        12 terjual
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Es Teh</span>
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                        20 terjual
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Jus Jeruk</span>
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                        8 terjual
-                      </Badge>
-                    </div>
+                    {getTopProducts().length === 0 ? (
+                      <div className="text-gray-500">
+                        Belum ada data penjualan
+                      </div>
+                    ) : (
+                      getTopProducts().map(
+                        ([name, count]: [string, number]) => (
+                          <div
+                            key={name}
+                            className="flex justify-between items-center"
+                          >
+                            <span>{name}</span>
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                              {count} terjual
+                            </Badge>
+                          </div>
+                        )
+                      )
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1473,6 +1507,27 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                 setNewParent((p) => ({ ...p, password: e.target.value }))
               }
             />
+            <Label>NIK</Label>
+            <Input
+              value={newParent.nik}
+              onChange={(e) =>
+                setNewParent((p) => ({ ...p, nik: e.target.value }))
+              }
+            />
+            <Label>No. HP</Label>
+            <Input
+              value={newParent.phone}
+              onChange={(e) =>
+                setNewParent((p) => ({ ...p, phone: e.target.value }))
+              }
+            />
+            <Label>Alamat</Label>
+            <Input
+              value={newParent.address}
+              onChange={(e) =>
+                setNewParent((p) => ({ ...p, address: e.target.value }))
+              }
+            />
             <Label>Anak (Nama/Kelas/Jurusan)</Label>
             <Select
               value={newParent.selectedStudentId}
@@ -1550,6 +1605,21 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
           <DialogFooter>
             <Button
               onClick={async () => {
+                if (
+                  !newParent.name ||
+                  !newParent.email ||
+                  !newParent.password ||
+                  !newParent.nik ||
+                  !newParent.phone ||
+                  !newParent.address
+                ) {
+                  toast({
+                    title: "Error",
+                    description: "Semua field wajib diisi!",
+                    variant: "destructive",
+                  });
+                  return;
+                }
                 setAddParentLoading(true);
                 try {
                   const res = await fetch("/api/users", {

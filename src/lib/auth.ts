@@ -1,76 +1,58 @@
+import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { prisma } from "./db";
+import { JWT } from "next-auth/jwt";
+import { Session } from "next-auth";
+import { NextAuthOptions } from "next-auth";
 
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  role: string;
-  name: string;
-}
+const prisma = new PrismaClient();
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(
-  password: string,
-  hashedPassword: string
-): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
-}
-
-export function generateToken(payload: JWTPayload): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET is not defined");
-  }
-  return jwt.sign(payload, secret, { expiresIn: "7d" });
-}
-
-export function verifyToken(token: string): JWTPayload | null {
-  try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error("JWT_SECRET is not defined");
-    }
-    return jwt.verify(token, secret) as JWTPayload;
-  } catch {
-    return null;
-  }
-}
-
-export async function authenticateUser(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      admin: true,
-      cashier: true,
-      student: true,
-      parent: true,
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password || !credentials?.role)
+          return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (
+          user &&
+          (await bcrypt.compare(credentials.password, user.password)) &&
+          user.role === credentials.role
+        ) {
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          };
+        }
+        return null;
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
+      if (user) {
+        token.role = user.role;
+        token.id = user.id;
+      }
+      return token;
     },
-  });
-
-  if (!user) {
-    return null;
-  }
-
-  const isValidPassword = await verifyPassword(password, user.password);
-  if (!isValidPassword) {
-    return null;
-  }
-
-  return user;
-}
-
-export async function getUserById(userId: string) {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      admin: true,
-      cashier: true,
-      student: true,
-      parent: true,
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (token) {
+        session.user.role = token.role;
+        session.user.id = token.id;
+      }
+      return session;
     },
-  });
-}
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+};

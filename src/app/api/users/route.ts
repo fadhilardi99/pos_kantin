@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { UserService } from "@/lib/services";
 import { UserRole } from "@prisma/client";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -46,6 +46,12 @@ export async function POST(req: NextRequest) {
         user = await UserService.createAdmin(body);
         break;
       case UserRole.PARENT:
+        if (!body.nik || !body.phone || !body.address) {
+          return NextResponse.json(
+            { error: "NIK, No. HP, dan Alamat wajib diisi" },
+            { status: 400 }
+          );
+        }
         user = await UserService.createParent({
           ...body,
           children: body.children || [],

@@ -78,6 +78,7 @@ export class TransactionService {
       return {
         transaction,
         items: transactionItems,
+        transaction_items: transactionItems, // alias untuk konsistensi frontend
       };
     });
   }
@@ -132,28 +133,18 @@ export class TransactionService {
 
   // Get all transactions
   static async getAllTransactions() {
-    return await prisma.transaction.findMany({
+    const results = await prisma.transaction.findMany({
       include: {
-        student: {
-          include: {
-            user: true,
-          },
-        },
-        cashier: {
-          include: {
-            user: true,
-          },
-        },
-        transactionItems: {
-          include: {
-            product: true,
-          },
-        },
+        student: { include: { user: true } },
+        cashier: { include: { user: true } },
+        transactionItems: { include: { product: true } },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
+    return results.map((trx) => ({
+      ...trx,
+      transaction_items: trx.transactionItems,
+    }));
   }
 
   // Get transactions by student

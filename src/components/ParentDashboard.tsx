@@ -57,6 +57,12 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [activeTab, setActiveTab] = useState("topup");
 
+  // Tambahkan state untuk field baru
+  const [nik, setNik] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [formError, setFormError] = useState("");
+
   // Fetch children (students) from backend
   useEffect(() => {
     async function fetchChildren() {
@@ -373,7 +379,12 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                         key={amount}
                         variant="outline"
                         size="sm"
-                        onClick={() => setTopUpAmount(amount.toString())}
+                        onClick={() => {
+                          setTopUpAmount((prev) => {
+                            const prevVal = parseInt(prev || "0");
+                            return (prevVal + amount).toString();
+                          });
+                        }}
                         className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                       >
                         {formatCurrency(amount)}
