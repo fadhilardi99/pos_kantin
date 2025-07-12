@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,6 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,8 +26,16 @@ import {
   LogOut,
   User,
   Receipt,
+  Camera,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Upload,
+  FileImage,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Html5QrcodeScanner } from "html5-qrcode";
+import { BrowserQRCodeReader } from "@zxing/browser";
 
 type Student = {
   id: string;
@@ -58,6 +73,16 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [cashier, setCashier] = useState<Cashier | null>(null);
 
+  // QR Scanner states
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [scannedData, setScannedData] = useState<string>("");
+  const [scanning, setScanning] = useState(false);
+  const [scannerError, setScannerError] = useState<string>("");
+  const [scannerMode, setScannerMode] = useState<"camera" | "upload">("camera");
+  const qrScannerRef = useRef<HTMLDivElement>(null);
+  const scannerInstanceRef = useRef<Html5QrcodeScanner | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     async function fetchCashier() {
       const res = await fetch(`/api/users?userId=${user.id}`);
@@ -68,6 +93,24 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
     }
     if (user?.id) fetchCashier();
   }, [user?.id]);
+
+  // QR Scanner effect
+  useEffect(() => {
+    if (qrScannerOpen && scanning && scannerMode === "camera") {
+      // Start scanner when modal opens and camera mode is selected
+      setTimeout(() => {
+        startQRScanner();
+      }, 100);
+    } else {
+      // Stop scanner when modal closes or mode changes
+      stopQRScanner();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopQRScanner();
+    };
+  }, [qrScannerOpen, scanning, scannerMode]);
 
   useEffect(() => {
     async function fetchProducts() {
@@ -135,6 +178,190 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   };
   const handleSearchByNIS = () => {
     if (nisInput.trim()) fetchStudentByNIS(nisInput.trim());
+  };
+
+  // QR Scanner functions
+  const handleScanQRCode = () => {
+    setQrScannerOpen(true);
+    setScanning(false);
+    setScannedData("");
+    setScannerError("");
+    setScannerMode("camera");
+  };
+
+  const processScannedQRCode = (qrData: string) => {
+    try {
+      // Decode QR data
+      const decodedData = JSON.parse(atob(qrData));
+
+      // Validate QR data structure
+      if (
+        !decodedData.studentId ||
+        !decodedData.studentName ||
+        !decodedData.nis
+      ) {
+        throw new Error("Data QR code tidak valid");
+      }
+
+      // Check if QR is for purchase
+      if (decodedData.type !== "PURCHASE_QR") {
+        throw new Error("QR code bukan untuk pembelian");
+      }
+
+      // Set current student from QR data
+      setCurrentStudent({
+        id: decodedData.studentId,
+        name: decodedData.studentName,
+        nis: decodedData.nis,
+        saldo: Number(decodedData.saldo) || 0,
+        class: decodedData.class || "-",
+      });
+
+      // Fetch latest student data and transactions
+      fetchStudentByNIS(decodedData.nis);
+      fetchStudentTransactions(decodedData.studentId);
+
+      setQrScannerOpen(false);
+      setScanning(false);
+      setScannedData("");
+      setScannerError("");
+
+      toast({
+        title: "QR Code Berhasil Di-scan",
+        description: `Siswa: ${
+          decodedData.studentName
+        } - Saldo: ${formatCurrency(Number(decodedData.saldo) || 0)}`,
+      });
+    } catch (error) {
+      console.error("Error processing QR code:", error);
+      toast({
+        title: "QR Code Tidak Valid",
+        description: "QR code tidak dapat diproses atau format tidak sesuai",
+        variant: "destructive",
+      });
+      setScanning(false);
+      setScannerError("QR code tidak valid atau format tidak sesuai");
+    }
+  };
+
+  const startQRScanner = () => {
+    if (!qrScannerRef.current) return;
+
+    try {
+      // Clean up previous scanner
+      if (scannerInstanceRef.current) {
+        scannerInstanceRef.current.clear();
+      }
+
+      // Create new scanner
+      scannerInstanceRef.current = new Html5QrcodeScanner(
+        "qr-reader",
+        {
+          fps: 10,
+          qrbox: { width: 256, height: 256 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: true,
+          defaultZoomValueIfSupported: 2,
+        },
+        false
+      );
+
+      // Start scanning
+      scannerInstanceRef.current.render(
+        (decodedText: string) => {
+          // Success callback
+          processScannedQRCode(decodedText);
+        },
+        (errorMessage: string) => {
+          // Only show error if not NotFoundException
+          if (
+            errorMessage &&
+            !errorMessage.includes("NotFoundException") &&
+            !errorMessage.includes("no MultiFormat Readers")
+          ) {
+            setScannerError(errorMessage);
+          } else {
+            setScannerError(""); // Clear error for NotFoundException
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error starting QR scanner:", error);
+      setScannerError(
+        "Gagal mengakses kamera. Pastikan izin kamera diberikan."
+      );
+    }
+  };
+
+  const stopQRScanner = () => {
+    if (scannerInstanceRef.current) {
+      scannerInstanceRef.current.clear();
+      scannerInstanceRef.current = null;
+    }
+  };
+
+  // File upload functions
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "File Tidak Valid",
+        description: "Pilih file gambar (JPG, PNG, GIF)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Terlalu Besar",
+        description: "Ukuran file maksimal 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Read file as image
+      const imageUrl = URL.createObjectURL(file);
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      // Use zxing-js/browser to decode QR code from image
+      const codeReader = new BrowserQRCodeReader();
+      const result = await codeReader.decodeFromImageElement(img);
+      if (!result || !result.getText()) {
+        throw new Error("QR code tidak ditemukan pada gambar");
+      }
+      processScannedQRCode(result.getText());
+      toast({
+        title: "QR Code Terdeteksi",
+        description: "QR code berhasil dibaca dari gambar",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Gagal Membaca QR Code",
+        description:
+          err?.message ||
+          "QR code tidak valid atau tidak ditemukan pada gambar",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const addToCart = (product: Product) => {
@@ -283,7 +510,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button
-                  onClick={handleScanStudent}
+                  onClick={handleScanQRCode}
                   className="w-full bg-emerald-700 hover:bg-emerald-800"
                 >
                   <QrCode className="h-4 w-4 mr-2" />
@@ -565,6 +792,174 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* QR Scanner Modal */}
+      <Dialog open={qrScannerOpen} onOpenChange={setQrScannerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Camera className="h-5 w-5" />
+              <span>Scan QR Code Siswa</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {!scanning ? (
+              // Mode selection
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">
+                    Pilih Metode Scan QR Code
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Camera Mode */}
+                  <Button
+                    onClick={() => {
+                      setScannerMode("camera");
+                      setScanning(true);
+                    }}
+                    className={`h-24 flex flex-col items-center justify-center space-y-2 ${
+                      scannerMode === "camera"
+                        ? "bg-emerald-700 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Camera className="h-8 w-8" />
+                    <span className="text-sm font-medium">Kamera</span>
+                    <span className="text-xs opacity-75">Scan langsung</span>
+                  </Button>
+
+                  {/* Upload Mode */}
+                  <Button
+                    onClick={() => {
+                      setScannerMode("upload");
+                      handleUploadClick();
+                    }}
+                    className={`h-24 flex flex-col items-center justify-center space-y-2 ${
+                      scannerMode === "upload"
+                        ? "bg-emerald-700 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Upload className="h-8 w-8" />
+                    <span className="text-sm font-medium">Upload</span>
+                    <span className="text-xs opacity-75">Upload gambar</span>
+                  </Button>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    Pilih metode yang paling sesuai dengan kebutuhan Anda
+                  </p>
+                </div>
+              </div>
+            ) : scannerMode === "camera" ? (
+              // Camera Scanner
+              <div className="text-center space-y-4">
+                {/* QR Scanner Container */}
+                <div className="relative bg-black rounded-lg overflow-hidden">
+                  {/* Scanner View */}
+                  <div
+                    ref={qrScannerRef}
+                    id="qr-reader"
+                    className="w-full h-80"
+                  ></div>
+
+                  {/* Overlay with scanning frame */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="flex items-center justify-center h-full">
+                      <div className="w-64 h-64 border-2 border-emerald-400 rounded-lg relative">
+                        {/* Corner indicators */}
+                        <div className="absolute -top-1 -left-1 w-6 h-6 border-l-2 border-t-2 border-emerald-400"></div>
+                        <div className="absolute -top-1 -right-1 w-6 h-6 border-r-2 border-t-2 border-emerald-400"></div>
+                        <div className="absolute -bottom-1 -left-1 w-6 h-6 border-l-2 border-b-2 border-emerald-400"></div>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 border-r-2 border-b-2 border-emerald-400"></div>
+
+                        {/* Scanning line animation */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-emerald-400">
+                          <div className="w-1/3 h-full bg-white animate-ping"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Camera className="h-5 w-5 text-emerald-600" />
+                    <span className="text-sm font-medium text-gray-700">
+                      Scan QR Code Siswa
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Posisikan QR code dalam kotak di atas
+                  </p>
+
+                  {scannerError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        <span className="text-sm text-red-700">
+                          {scannerError}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Upload Mode
+              <div className="text-center space-y-4">
+                <div className="bg-gray-100 p-8 rounded-lg border-2 border-dashed border-gray-300">
+                  <FileImage className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-700 mb-2">
+                    Upload Gambar QR Code
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Pilih file gambar yang berisi QR code siswa
+                  </p>
+
+                  <Button
+                    onClick={handleUploadClick}
+                    className="bg-emerald-700 hover:bg-emerald-800"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Pilih File
+                  </Button>
+
+                  <p className="text-xs text-gray-400 mt-2">
+                    Format: JPG, PNG, GIF (Max: 5MB)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setQrScannerOpen(false);
+                setScanning(false);
+                setScannedData("");
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden file input for upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
     </div>
   );
 };

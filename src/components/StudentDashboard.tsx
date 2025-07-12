@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 
 import {
   Wallet,
@@ -18,6 +19,8 @@ import {
   CreditCard,
   ShoppingCart,
   BarChart3,
+  Copy,
+  Download,
 } from "lucide-react";
 
 export interface StudentUser {
@@ -41,6 +44,11 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+
+  // QR Code states
+  const [qrCodeData, setQrCodeData] = useState<string>("");
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  const [qrCodeLoading, setQrCodeLoading] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -122,6 +130,66 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
         new Date(t.createdAt).getFullYear() === now.getFullYear()
     ).length;
   };
+
+  // Generate QR Code for student purchase
+  const generateQRCode = () => {
+    if (!studentData) return;
+
+    setQrCodeLoading(true);
+
+    // Create QR code data with student information
+    const qrData = {
+      studentId: studentData.id,
+      studentName: studentData.name,
+      nis: studentData.nis,
+      saldo: studentData.saldo,
+      timestamp: new Date().toISOString(),
+      type: "PURCHASE_QR",
+      merchantId: "KANTIN_SCHOOL_001",
+    };
+
+    // Encode the data
+    const encodedData = btoa(JSON.stringify(qrData));
+    setQrCodeData(encodedData);
+
+    // Generate QR code URL using a QR code service
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+      encodedData
+    )}`;
+    setQrCodeUrl(qrCodeUrl);
+
+    setQrCodeLoading(false);
+  };
+
+  const copyQRCodeData = () => {
+    if (qrCodeData) {
+      navigator.clipboard.writeText(qrCodeData);
+      toast({
+        title: "Data QR Code Disalin",
+        description: "Data QR code telah disalin ke clipboard",
+      });
+    }
+  };
+
+  const downloadQRCode = () => {
+    if (qrCodeUrl) {
+      const link = document.createElement("a");
+      link.href = qrCodeUrl;
+      link.download = `qr_code_${studentData?.nis || "student"}.png`;
+      link.click();
+      toast({
+        title: "QR Code Diunduh",
+        description: "QR code telah diunduh ke perangkat Anda",
+      });
+    }
+  };
+
+  // Generate QR code when student data is loaded
+  useEffect(() => {
+    if (studentData && !qrCodeData) {
+      generateQRCode();
+    }
+  }, [studentData]);
 
   if (loading) return <div>Loading data siswa...</div>;
   if (!studentData) return <div>Data siswa tidak ditemukan.</div>;
@@ -208,13 +276,77 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
             </CardHeader>
             <CardContent className="text-center">
               <div className="bg-gray-100 p-8 rounded-lg mb-4">
-                <div className="w-32 h-32 mx-auto bg-black/10 rounded border-2 border-dashed border-gray-400 flex items-center justify-center">
-                  <QrCode className="h-16 w-16 text-gray-400" />
-                </div>
+                {qrCodeLoading ? (
+                  <div className="w-32 h-32 mx-auto bg-white rounded-lg border-2 border-emerald-200 flex items-center justify-center">
+                    <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin" />
+                  </div>
+                ) : qrCodeUrl ? (
+                  <div className="w-32 h-32 mx-auto bg-white rounded-lg border-2 border-emerald-200 flex items-center justify-center">
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code"
+                      className="w-28 h-28"
+                      onError={(e) => {
+                        // Fallback jika gambar gagal dimuat
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                        target.parentElement!.innerHTML = `
+                          <div class="w-28 h-28 bg-black/10 rounded border-2 border-dashed border-gray-400 flex items-center justify-center">
+                            <svg class="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z"/>
+                            </svg>
+                          </div>
+                        `;
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 mx-auto bg-black/10 rounded border-2 border-dashed border-gray-400 flex items-center justify-center">
+                    <QrCode className="h-16 w-16 text-gray-400" />
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-gray-600">
-                Tunjukkan QR code ini ke kasir untuk melakukan pembelian
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Tunjukkan QR code ini ke kasir untuk melakukan pembelian
+                </p>
+                {qrCodeData && (
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyQRCodeData}
+                      className="flex-1 text-xs"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Salin Data
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadQRCode}
+                      className="flex-1 text-xs"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={generateQRCode}
+                  disabled={qrCodeLoading}
+                  className="w-full"
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 mr-1 ${
+                      qrCodeLoading ? "animate-spin" : ""
+                    }`}
+                  />
+                  {qrCodeLoading ? "Membuat QR..." : "Refresh QR Code"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
           {/* Quick Stats */}
