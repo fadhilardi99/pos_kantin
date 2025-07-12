@@ -8,6 +8,8 @@ Sistem POS modern untuk mengelola transaksi kantin sekolah dengan fitur manajeme
 - **Dashboard Kasir**: POS dengan QR code dan pencarian siswa
 - **Dashboard Siswa**: Cek saldo dan riwayat transaksi
 - **Dashboard Orang Tua**: Top up saldo untuk anak
+- **Top Up Manual oleh Admin**: Admin dapat menambah saldo siswa secara manual melalui dashboard, dan setiap top up akan otomatis tercatat di riwayat top up siswa dan orang tua.
+- **Riwayat Top Up & Transaksi**: Siswa dan orang tua dapat melihat riwayat top up & transaksi dengan tampilan tabs, lengkap dengan label sumber top up (oleh admin/orang tua).
 - **Sistem Autentikasi**: Multi-role dengan JWT
 - **Database**: PostgreSQL dengan Prisma ORM
 
@@ -142,6 +144,12 @@ npm run db:studio
 npm run db:seed
 ```
 
+## 💡 Catatan Teknis
+
+- **Top Up Manual oleh Admin**: Setiap top up manual oleh admin akan membuat record baru di tabel `top_ups` dengan status APPROVED, method CASH, dan approvedBy diisi dengan adminId (bukan userId).
+- **Sumber Top Up di Riwayat**: Pada riwayat top up siswa dan orang tua, akan tampil label "Top up oleh Admin" jika parentId kosong dan approvedBy terisi, atau "Top up oleh Orang Tua" jika parentId ada.
+- **Constraint Database**: Field `approvedBy` pada tabel `top_ups` adalah foreign key ke tabel `admins`, bukan ke tabel `users`.
+
 ## 📁 Project Structure
 
 ```
@@ -167,6 +175,9 @@ pos_kantin/
 │   └── utils.ts          # Utility functions
 └── package.json
 ```
+
+- **ParentDashboard**: Riwayat top up & transaksi anak kini digabung dalam satu card dengan tabs, dan fitur "Lihat Semua Riwayat" untuk menampilkan seluruh data.
+- **StudentDashboard**: Riwayat top up menampilkan sumber top up (admin/orang tua) secara jelas.
 
 ## 🎨 Design System
 
