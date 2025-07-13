@@ -21,18 +21,22 @@ export const authOptions: NextAuthOptions = {
         ) {
           return null;
         }
-        // PrismaClient hanya di-import dan di-inisialisasi di sini
-        const { PrismaClient } = await import("@prisma/client");
-        const prisma = new PrismaClient();
+
         try {
+          // Only import Prisma at runtime to avoid build-time issues
+          const { PrismaClient } = await import("@prisma/client");
+          const prisma = new PrismaClient();
+
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           });
+
           if (
             user &&
             (await bcrypt.compare(credentials.password, user.password)) &&
             user.role === credentials.role
           ) {
+            await prisma.$disconnect();
             return {
               id: user.id,
               name: user.name,
@@ -40,9 +44,12 @@ export const authOptions: NextAuthOptions = {
               role: user.role,
             };
           }
-        } finally {
+
           await prisma.$disconnect();
+        } catch (error) {
+          console.error("Authentication error:", error);
         }
+
         return null;
       },
     }),

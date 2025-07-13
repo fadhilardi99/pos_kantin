@@ -23,6 +23,10 @@ const nextConfig = {
       },
     ];
   },
+  // Add environment variables for Prisma
+  env: {
+    PRISMA_GENERATE_DATAPROXY: "true",
+  },
 };
 
 module.exports = nextConfig;
