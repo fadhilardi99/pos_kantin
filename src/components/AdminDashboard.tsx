@@ -384,12 +384,21 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal memproses top up");
+
       toast({
         title: `Top up ${action === "approve" ? "disetujui" : "ditolak"}`,
       });
-      // Refresh topups
-      const res2 = await fetch("/api/topups");
-      setTopups(await res2.json());
+
+      // Refresh topups with a small delay to ensure database is updated
+      setTimeout(async () => {
+        try {
+          const res2 = await fetch("/api/topups");
+          const updatedTopups = await res2.json();
+          setTopups(updatedTopups);
+        } catch (refreshError) {
+          console.error("Error refreshing topups:", refreshError);
+        }
+      }, 500);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {

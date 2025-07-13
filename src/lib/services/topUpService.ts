@@ -185,14 +185,19 @@ export class TopUpService {
         },
       });
 
-      // Update student saldo
-      await UserService.updateStudentSaldo(
-        topUp.studentId,
-        Number(topUp.amount)
-      );
+      // Update student saldo within the same transaction
+      await tx.student.update({
+        where: { id: topUp.studentId },
+        data: {
+          saldo: {
+            increment: Number(topUp.amount),
+          },
+        },
+      });
 
       return updated;
     });
+
     // Send email notification to parent
     if (topUp.parent?.user?.email) {
       await sendTopUpNotification(
@@ -275,11 +280,15 @@ export class TopUpService {
         },
       });
 
-      // Update student saldo
-      await UserService.updateStudentSaldo(
-        topUp.studentId,
-        Number(topUp.amount)
-      );
+      // Update student saldo within the same transaction
+      await tx.student.update({
+        where: { id: topUp.studentId },
+        data: {
+          saldo: {
+            increment: Number(topUp.amount),
+          },
+        },
+      });
 
       return updatedTopUp;
     });

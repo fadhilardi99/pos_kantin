@@ -48,6 +48,7 @@ export async function PATCH(req: NextRequest) {
       { status: 400 }
     );
   }
+
   try {
     let result;
     if (body.action === "approve") {
