@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UserService } from "@/lib/services";
+import { userService } from "@/lib/services";
 import { UserRole } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -8,19 +8,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
   if (userId) {
-    // Cari kasir berdasarkan userId
-    const cashier = await UserService.getCashierByUserId(userId);
-    if (!cashier) {
-      return NextResponse.json({ error: "Cashier not found" }, { status: 404 });
+    const user = await userService.getUserById(userId);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    return NextResponse.json(cashier);
+    return NextResponse.json(user);
   }
-  const role = searchParams.get("role") as UserRole | null;
-  if (role === UserRole.CASHIER) {
-    const cashiers = await UserService.getAllCashiers();
-    return NextResponse.json(cashiers);
-  }
-  const users = await UserService.getUsersByRole(role || UserRole.STUDENT);
+
+  const users = await userService.getAllUsers();
   return NextResponse.json(users);
 }
 
@@ -34,32 +29,7 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   try {
-    let user;
-    switch (body.role) {
-      case UserRole.STUDENT:
-        user = await UserService.createStudent(body);
-        break;
-      case UserRole.CASHIER:
-        user = await UserService.createCashier(body);
-        break;
-      case UserRole.ADMIN:
-        user = await UserService.createAdmin(body);
-        break;
-      case UserRole.PARENT:
-        if (!body.nik || !body.phone || !body.address) {
-          return NextResponse.json(
-            { error: "NIK, No. HP, dan Alamat wajib diisi" },
-            { status: 400 }
-          );
-        }
-        user = await UserService.createParent({
-          ...body,
-          children: body.children || [],
-        });
-        break;
-      default:
-        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-    }
+    const user = await userService.createUser(body);
     return NextResponse.json(user, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
@@ -79,16 +49,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
   }
   try {
-    // Jika update parent dan ada children, update relasi parentStudents
-    if (body.role === "PARENT" && Array.isArray(body.children)) {
-      const updated = await UserService.updateParentWithChildren(
-        body.id,
-        body,
-        body.children
-      );
-      return NextResponse.json(updated);
-    }
-    const user = await UserService.updateUser(body.id, body);
+    const user = await userService.updateUser(body.id, body);
     return NextResponse.json(user);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
@@ -108,7 +69,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
   }
   try {
-    await UserService.deleteUser(body.id);
+    await userService.deleteUser(body.id);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });

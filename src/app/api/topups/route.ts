@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { TopUpService } from "@/lib/services";
+import { topUpService } from "@/lib/services";
 import { PaymentMethod } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function GET() {
-  const topups = await TopUpService.getAllTopUps();
+  const topups = await topUpService.getAllTopUps();
   return NextResponse.json(topups);
 }
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   try {
-    const topup = await TopUpService.createTopUp({
+    const topup = await topUpService.createTopUp({
       studentId: body.studentId,
       parentId: body.parentId,
       amount: body.amount,
@@ -51,13 +51,12 @@ export async function PATCH(req: NextRequest) {
   try {
     let result;
     if (body.action === "approve") {
-      result = await TopUpService.approveTopUp(body.id, session.user.id);
+      result = await topUpService.updateTopUp(body.id, { status: "APPROVED" });
     } else if (body.action === "reject") {
-      result = await TopUpService.rejectTopUp(
-        body.id,
-        session.user.id,
-        body.reason
-      );
+      result = await topUpService.updateTopUp(body.id, {
+        status: "REJECTED",
+        notes: body.reason,
+      });
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
