@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreditCard, LogOut, Plus, Search, History } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import useSWR from "swr";
 
 interface User {
   name: string;
@@ -30,6 +31,8 @@ interface ParentDashboardProps {
   user: User;
   onLogout: () => void;
 }
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   // Hapus import berikut:
@@ -45,12 +48,12 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   const [children, setChildren] = useState<any[]>([]);
 
   // Top up & transaction history from API
-  const [topUpHistory, setTopUpHistory] = useState<any[]>([]);
-  const [loadingTopUp, setLoadingTopUp] = useState(true);
-  const [errorTopUp, setErrorTopUp] = useState<string | null>(null);
-  const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
-  const [loadingTx, setLoadingTx] = useState(true);
-  const [errorTx, setErrorTx] = useState<string | null>(null);
+  // const [topUpHistory, setTopUpHistory] = useState<any[]>([]);
+  // const [loadingTopUp, setLoadingTopUp] = useState(true);
+  // const [errorTopUp, setErrorTopUp] = useState<string | null>(null);
+  // const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
+  // const [loadingTx, setLoadingTx] = useState(true);
+  // const [errorTx, setErrorTx] = useState<string | null>(null);
 
   // Toggle for showing all history
   const [showAllTopUps, setShowAllTopUps] = useState(false);
@@ -63,7 +66,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
   const [address, setAddress] = useState("");
   const [formError, setFormError] = useState("");
 
-  // Fetch children (students) from backend
+  // Fetch children (students) from backend (tetap pakai useEffect karena endpoint khusus)
   useEffect(() => {
     async function fetchChildren() {
       try {
@@ -77,51 +80,32 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
     fetchChildren();
   }, []);
 
-  useEffect(() => {
-    async function fetchTopUps() {
-      setLoadingTopUp(true);
-      setErrorTopUp(null);
-      try {
-        const res = await fetch("/api/topups");
-        const data = await res.json();
-        // Filter topups for this parent's children (by NIS or name)
-        const filtered = data.filter((t: any) =>
-          children.some(
-            (c) => t.student?.nis === c.nis || t.student?.name === c.name
-          )
-        );
-        setTopUpHistory(filtered);
-      } catch (e: any) {
-        setErrorTopUp("Gagal memuat top up");
-      } finally {
-        setLoadingTopUp(false);
-      }
-    }
-    fetchTopUps();
-  }, [children]);
+  // Pakai SWR untuk topUpHistory dan transactionHistory
+  const {
+    data: allTopUps = [],
+    isLoading: loadingTopUp,
+    error: errorTopUp,
+    mutate: mutateTopUps,
+  } = useSWR("/api/topups", fetcher, { refreshInterval: 10000 });
 
-  useEffect(() => {
-    async function fetchTransactions() {
-      setLoadingTx(true);
-      setErrorTx(null);
-      try {
-        const res = await fetch("/api/transactions");
-        const data = await res.json();
-        // Filter transactions for this parent's children (by NIS or name)
-        const filtered = data.filter((t: any) =>
-          children.some(
-            (c) => t.student?.nis === c.nis || t.student?.name === c.name
-          )
-        );
-        setTransactionHistory(filtered);
-      } catch (e: any) {
-        setErrorTx("Gagal memuat transaksi");
-      } finally {
-        setLoadingTx(false);
-      }
-    }
-    fetchTransactions();
-  }, [children]);
+  const {
+    data: allTransactions = [],
+    isLoading: loadingTx,
+    error: errorTx,
+    mutate: mutateTx,
+  } = useSWR("/api/transactions", fetcher, { refreshInterval: 10000 });
+
+  // Filter topups dan transaksi sesuai anak
+  const topUpHistory = allTopUps.filter((t: any) =>
+    children.some(
+      (c: any) => t.student?.nis === c.nis || t.student?.name === c.name
+    )
+  );
+  const transactionHistory = allTransactions.filter((t: any) =>
+    children.some(
+      (c: any) => t.student?.nis === c.nis || t.student?.name === c.name
+    )
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -131,7 +115,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
     }).format(amount);
   };
 
-  const handleTopUp = async () => {
+  const handleTopUp = async (amount: number) => {
     if (!selectedStudent || !topUpAmount) {
       toast({
         title: "Error",
@@ -141,8 +125,8 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
       return;
     }
 
-    const amount = parseInt(topUpAmount);
-    if (amount < 10000) {
+    const amountToUse = parseInt(topUpAmount);
+    if (amountToUse < 10000) {
       toast({
         title: "Error",
         description: "Minimal top up Rp 10.000",
@@ -168,7 +152,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentId: student.id.toString(),
-          amount: amount,
+          amount: amountToUse,
           method: selectedMethod,
         }),
       });
@@ -178,23 +162,14 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
       }
       toast({
         title: "Top Up Berhasil",
-        description: `Berhasil top up ${formatCurrency(amount)} ke akun ${
+        description: `Berhasil top up ${formatCurrency(amountToUse)} ke akun ${
           student.name
         }`,
       });
       setSelectedStudent("");
       setTopUpAmount("");
-      // Refresh data top up
-      setLoadingTopUp(true);
-      const res2 = await fetch("/api/topups");
-      const data2 = await res2.json();
-      const filtered = data2.filter((t: any) =>
-        children.some(
-          (c) => t.student?.nis === c.nis || t.student?.name === c.name
-        )
-      );
-      setTopUpHistory(filtered);
-      setLoadingTopUp(false);
+      // Refresh data top up pakai mutate
+      mutateTopUps();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -208,13 +183,13 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
 
   const now = new Date();
   const topUpsThisMonth = topUpHistory.filter(
-    (t) =>
+    (t: any) =>
       t.status === "APPROVED" &&
       new Date(t.createdAt).getMonth() === now.getMonth() &&
       new Date(t.createdAt).getFullYear() === now.getFullYear()
   );
   const totalTopUpThisMonth = topUpsThisMonth.reduce(
-    (sum, t) => sum + Number(t.amount || 0),
+    (sum: any, t: any) => sum + Number(t.amount || 0),
     0
   );
   const countTopUpThisMonth = topUpsThisMonth.length;
@@ -412,7 +387,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                 </div>
 
                 <Button
-                  onClick={handleTopUp}
+                  onClick={() => handleTopUp(parseInt(topUpAmount))}
                   className="w-full bg-emerald-700 hover:bg-emerald-800"
                   disabled={!selectedStudent || !topUpAmount}
                 >
@@ -448,7 +423,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                       {(showAllTopUps
                         ? topUpHistory
                         : topUpHistory.slice(0, 5)
-                      ).map((topup) => (
+                      ).map((topup: any) => (
                         <div
                           key={topup.id}
                           className="p-4 bg-gradient-to-r from-emerald-100 to-green-100 rounded-lg border border-emerald-200 mb-2"
@@ -520,7 +495,7 @@ const ParentDashboard = ({ user, onLogout }: ParentDashboardProps) => {
                       {(showAllTransactions
                         ? transactionHistory
                         : transactionHistory.slice(0, 5)
-                      ).map((t) => (
+                      ).map((t: any) => (
                         <div
                           key={t.id}
                           className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-100"

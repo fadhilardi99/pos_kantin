@@ -23,6 +23,8 @@ import {
   Download,
 } from "lucide-react";
 
+import useSWR from "swr";
+
 export interface StudentUser {
   id: string;
   name: string;
@@ -37,11 +39,11 @@ interface StudentDashboardProps {
   onLogout: () => void;
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
   const [studentData, setStudentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [topups, setTopups] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
 
@@ -49,6 +51,59 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
   const [qrCodeData, setQrCodeData] = useState<string>("");
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [qrCodeLoading, setQrCodeLoading] = useState(false);
+
+  // Pakai SWR untuk topups dan transactions
+  const {
+    data: allTopups = [],
+    isLoading: loadingTopups,
+    error: errorTopups,
+    mutate: mutateTopups,
+  } = useSWR(`/api/topups`, fetcher, { refreshInterval: 10000 });
+
+  const {
+    data: allTransactions = [],
+    isLoading: loadingTransactions,
+    error: errorTransactions,
+    mutate: mutateTransactions,
+  } = useSWR(`/api/transactions`, fetcher, { refreshInterval: 10000 });
+
+  // Fetch student data
+  useEffect(() => {
+    async function fetchStudentData() {
+      if (!user.email) return;
+
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/users/student?email=${user.email}`);
+        const data = await res.json();
+        setStudentData(data);
+      } catch (error) {
+        console.error("Error fetching student data:", error);
+        setStudentData(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStudentData();
+  }, [user.email]);
+
+  // Filter topups dan transactions berdasarkan student yang sedang login
+  const topups = allTopups.filter(
+    (t: any) =>
+      studentData &&
+      (t.student?.nis === studentData.nis ||
+        t.student?.id === studentData.id ||
+        t.student?.name === studentData.name)
+  );
+
+  const transactions = allTransactions.filter(
+    (t: any) =>
+      studentData &&
+      (t.student?.nis === studentData.nis ||
+        t.student?.id === studentData.id ||
+        t.student?.name === studentData.name)
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -58,60 +113,17 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
     }).format(amount);
   };
 
-  const fetchAll = async () => {
-    setLoadingStats(true);
-    try {
-      // Fetch student data
-      const resStudent = await fetch(`/api/users/student?email=${user.email}`);
-      const dataStudent = await resStudent.json();
-      setStudentData(dataStudent);
-      // Fetch topups (filter by studentId)
-      if (dataStudent?.nis || dataStudent?.id) {
-        const resTopups = await fetch(`/api/topups`);
-        const allTopups = await resTopups.json();
-        const studentTopups = allTopups.filter(
-          (t: any) =>
-            t.student?.nis === dataStudent.nis ||
-            t.student?.id === dataStudent.id
-        );
-        setTopups(studentTopups);
-      } else {
-        setTopups([]);
-      }
-      // Fetch transactions (filter by studentId)
-      if (dataStudent?.id) {
-        const resTrans = await fetch(`/api/transactions`);
-        const allTrans = await resTrans.json();
-        const studentTrans = allTrans.filter(
-          (t: any) => t.student?.id === dataStudent.id
-        );
-        setTransactions(studentTrans);
-      } else {
-        setTransactions([]);
-      }
-    } catch {
-      setStudentData(null);
-      setTopups([]);
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-      setLoadingStats(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user.email) fetchAll();
-    // eslint-disable-next-line
-  }, [user.email]);
+  // Hapus useEffect fetchAll lama dan semua setTopups/setTransactions manual
+  // Ganti semua penggunaan state topups dan transactions menjadi variabel dari SWR
 
   const getTotalTopUp = () =>
     topups
-      .filter((t) => t.status === "APPROVED")
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .filter((t: any) => t.status === "APPROVED")
+      .reduce((sum: any, t: any) => sum + Number(t.amount || 0), 0);
   const getTopUpThisMonth = () => {
     const now = new Date();
     return topups.filter(
-      (t) =>
+      (t: any) =>
         t.status === "APPROVED" &&
         new Date(t.createdAt).getMonth() === now.getMonth() &&
         new Date(t.createdAt).getFullYear() === now.getFullYear()
@@ -119,13 +131,13 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
   };
   const getTotalTrans = () =>
     transactions.reduce(
-      (sum, t) => sum + Number(t.totalAmount || t.amount || 0),
+      (sum: any, t: any) => sum + Number(t.totalAmount || t.amount || 0),
       0
     );
   const getTransThisMonth = () => {
     const now = new Date();
     return transactions.filter(
-      (t) =>
+      (t: any) =>
         new Date(t.createdAt).getMonth() === now.getMonth() &&
         new Date(t.createdAt).getFullYear() === now.getFullYear()
     ).length;
@@ -241,11 +253,11 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
                 variant="secondary"
                 size="sm"
                 className="bg-white/20 hover:bg-white/30 text-white border-none"
-                onClick={fetchAll}
-                disabled={loadingStats}
+                onClick={() => mutateTopups()} // Trigger refresh
+                disabled={loadingTopups}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                {loadingStats ? "Memuat..." : "Refresh"}
+                {loadingTopups ? "Memuat..." : "Refresh"}
               </Button>
             </div>
           </CardHeader>
@@ -411,7 +423,7 @@ const StudentDashboard = ({ user, onLogout }: StudentDashboardProps) => {
                 (showAllTransactions
                   ? transactions
                   : transactions.slice(0, 5)
-                ).map((t) => (
+                ).map((t: any) => (
                   <div
                     key={t.id}
                     className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-100"

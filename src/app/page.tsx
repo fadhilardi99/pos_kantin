@@ -70,24 +70,24 @@ export default function Page() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-amber-50 to-yellow-50">
       {/* Header */}
       <header className="bg-amber-50/90 backdrop-blur-md shadow-sm border-b border-green-200 sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="container mx-auto px-4 sm:px-6 py-4 w-full">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full">
+            <div className="flex items-center space-x-4 mb-4 sm:mb-0">
               <div className="bg-green-700 p-3 rounded-xl shadow-md">
                 <Wallet className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-green-800">
+                <h1 className="text-xl sm:text-2xl font-bold text-green-800">
                   POS Kantin Sekolah
                 </h1>
-                <p className="text-green-600 text-sm">
+                <p className="text-green-600 text-xs sm:text-sm">
                   Sistem Saldo Digital Terpercaya
                 </p>
               </div>
             </div>
             <Button
               onClick={() => setShowLogin(true)}
-              className="bg-green-700 hover:bg-green-800 text-white px-8 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300"
+              className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 text-sm sm:px-8 sm:py-3 sm:text-base rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-300 "
             >
               🚀 Mulai Sekarang
             </Button>

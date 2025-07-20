@@ -36,6 +36,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { BrowserQRCodeReader } from "@zxing/browser";
+import useSWR from "swr";
 
 type Student = {
   id: string;
@@ -62,13 +63,12 @@ interface CashierDashboardProps {
   onLogout: () => void;
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [cart, setCart] = useState<Product[]>([]);
   const [nisInput, setNisInput] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [errorProducts, setErrorProducts] = useState<string | null>(null);
   const [studentTransactions, setStudentTransactions] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [cashier, setCashier] = useState<Cashier | null>(null);
@@ -82,6 +82,20 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   const qrScannerRef = useRef<HTMLDivElement>(null);
   const scannerInstanceRef = useRef<Html5QrcodeScanner | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Pakai SWR untuk products dan transactions
+  const {
+    data: products = [],
+    isLoading: loadingProducts,
+    error: errorProducts,
+    mutate: mutateProducts,
+  } = useSWR("/api/products", fetcher, { refreshInterval: 10000 });
+
+  const { data: allTransactions = [], mutate: mutateTransactions } = useSWR(
+    "/api/transactions",
+    fetcher,
+    { refreshInterval: 10000 }
+  );
 
   useEffect(() => {
     async function fetchCashier() {
@@ -111,23 +125,6 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
       stopQRScanner();
     };
   }, [qrScannerOpen, scanning, scannerMode]);
-
-  useEffect(() => {
-    async function fetchProducts() {
-      setLoadingProducts(true);
-      setErrorProducts(null);
-      try {
-        const res = await fetch("/api/products");
-        const data = await res.json();
-        setProducts(data);
-      } catch (e: any) {
-        setErrorProducts("Gagal memuat produk");
-      } finally {
-        setLoadingProducts(false);
-      }
-    }
-    fetchProducts();
-  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -164,11 +161,11 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   };
   const fetchStudentTransactions = async (studentId: string) => {
     try {
-      const res = await fetch(`/api/transactions`);
-      const allTrans = await res.json();
-      setStudentTransactions(
-        allTrans.filter((t: any) => t.student?.id === studentId)
+      // Filter transactions berdasarkan studentId dari data SWR
+      const filtered = allTransactions.filter(
+        (t: any) => t.student?.id === studentId
       );
+      setStudentTransactions(filtered);
     } catch {
       setStudentTransactions([]);
     }
@@ -432,18 +429,23 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: currentStudent.id, // gunakan id siswa
-          cashierId: cashier.id, // gunakan id kasir hasil fetch
+          studentId: currentStudent.id,
+          cashierId: cashier.id,
           items: cart.map((item) => ({
             productId: item.id,
             quantity: item.quantity ?? 1,
             price: item.price,
           })),
-          paymentMethod: "QR_CODE", // atau "CASH" sesuai kebutuhan
+          paymentMethod: "QR_CODE",
           notes: "",
         }),
       });
       if (!res.ok) throw new Error("Gagal menyimpan transaksi");
+
+      // Refresh data setelah checkout
+      mutateTransactions();
+      mutateProducts(); // Refresh products untuk update stock
+
       // Fetch saldo terbaru
       await fetchStudentByNIS(currentStudent.nis);
       setCart([]);
@@ -459,7 +461,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
   const filteredProducts =
     selectedCategory === "ALL"
       ? products
-      : products.filter((p) => p.category === selectedCategory);
+      : products.filter((p: any) => p.category === selectedCategory);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
@@ -668,7 +670,7 @@ const CashierDashboard = ({ user, onLogout }: CashierDashboardProps) => {
                       Tidak ada produk.
                     </div>
                   ) : (
-                    filteredProducts.map((product) => (
+                    filteredProducts.map((product: any) => (
                       <Card
                         key={product.id}
                         className="border-emerald-200 shadow-sm hover:shadow-lg transition-shadow rounded-xl flex items-center p-3"
